@@ -8,7 +8,13 @@ public record CoreConfig(
         boolean failClosed,
         boolean auditEnabled,
         int auditRetentionDays,
-        boolean logPlayerIps
+        boolean logPlayerIps,
+        int chatMaxMessages,
+        int chatWindowSeconds,
+        int chatNoticeCooldownSeconds,
+        int joinFloodThreshold,
+        int joinFloodWindowSeconds,
+        int joinAlertCooldownSeconds
 ) {
     public static CoreConfig defaults() {
         return new CoreConfig(
@@ -19,7 +25,13 @@ public record CoreConfig(
                 true,
                 true,
                 30,
-                false
+                false,
+                5,
+                5,
+                10,
+                8,
+                20,
+                120
         );
     }
 }
