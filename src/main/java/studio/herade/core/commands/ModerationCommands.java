@@ -28,51 +28,54 @@ public final class ModerationCommands {
     }
 
     public static void register(CommandDispatcher<CommandSourceStack> dispatcher) {
-        dispatcher.register(Commands.literal("herade")
-                .requires(source -> source.permissions().hasPermission(Permissions.COMMANDS_MODERATOR))
-                .then(Commands.literal("status")
-                        .executes(context -> status(context.getSource())))
-                .then(Commands.literal("vanish")
-                        .executes(context -> toggleVanish(context.getSource())))
-                .then(Commands.literal("kick")
-                        .then(Commands.argument("target", EntityArgument.player())
+        var root = Commands.literal("herade")
+                .requires(source -> source.permissions().hasPermission(Permissions.COMMANDS_MODERATOR));
+
+        root.then(Commands.literal("status")
+                .executes(context -> status(context.getSource())));
+        root.then(Commands.literal("vanish")
+                .executes(context -> toggleVanish(context.getSource())));
+        root.then(Commands.literal("kick")
+                .then(Commands.argument("target", EntityArgument.player())
+                        .then(Commands.argument("reason", StringArgumentType.greedyString())
+                                .executes(ModerationCommands::kick))));
+        root.then(Commands.literal("ban")
+                .then(Commands.argument("target", EntityArgument.player())
+                        .then(Commands.argument("reason", StringArgumentType.greedyString())
+                                .executes(context -> ban(context, 0)))));
+        root.then(Commands.literal("tempban")
+                .then(Commands.argument("target", EntityArgument.player())
+                        .then(Commands.argument("minutes", IntegerArgumentType.integer(1, 525600))
                                 .then(Commands.argument("reason", StringArgumentType.greedyString())
-                                        .executes(context -> kick(context)))))
-                .then(Commands.literal("ban")
-                        .then(Commands.argument("target", EntityArgument.player())
+                                        .executes(context -> ban(context,
+                                                IntegerArgumentType.getInteger(context, "minutes")))))));
+        root.then(Commands.literal("timeout")
+                .then(Commands.argument("target", EntityArgument.player())
+                        .then(Commands.argument("minutes", IntegerArgumentType.integer(1, 525600))
                                 .then(Commands.argument("reason", StringArgumentType.greedyString())
-                                        .executes(context -> ban(context, 0)))))
-                .then(Commands.literal("tempban")
-                        .then(Commands.argument("target", EntityArgument.player())
-                                .then(Commands.argument("minutes", IntegerArgumentType.integer(1, 525600))
-                                        .then(Commands.argument("reason", StringArgumentType.greedyString())
-                                                .executes(context -> ban(context,
-                                                        IntegerArgumentType.getInteger(context, "minutes")))))))
-                .then(Commands.literal("timeout")
-                        .then(Commands.argument("target", EntityArgument.player())
-                                .then(Commands.argument("minutes", IntegerArgumentType.integer(1, 525600))
-                                        .then(Commands.argument("reason", StringArgumentType.greedyString())
-                                                .executes(context -> timeout(context))))))
-                .then(Commands.literal("untimeout")
-                        .then(Commands.argument("target", EntityArgument.player())
-                                .executes(context -> untimeout(context))))
-                .then(Commands.literal("unban")
-                        .then(Commands.argument("uuid", StringArgumentType.word())
-                                .then(Commands.argument("username", StringArgumentType.word())
-                                        .executes(context -> unban(context)))))
-                .then(Commands.literal("audit")
-                        .executes(context -> audit(context.getSource(), 10))
-                        .then(Commands.argument("limit", IntegerArgumentType.integer(1, 20))
-                                .executes(context -> audit(context.getSource(),
-                                        IntegerArgumentType.getInteger(context, "limit"))))))
-                .then(Commands.literal("inspect")
-                        .then(Commands.argument("target", EntityArgument.player())
-                                .executes(context -> inspect(context.getSource(),
-                                        EntityArgument.getPlayer(context, "target")))))
-                .then(Commands.literal("punishments")
-                        .then(Commands.argument("target", EntityArgument.player())
-                                .executes(context -> punishments(context.getSource(),
-                                        EntityArgument.getPlayer(context, "target"))))));
+                                        .executes(ModerationCommands::timeout)))));
+        root.then(Commands.literal("untimeout")
+                .then(Commands.argument("target", EntityArgument.player())
+                        .executes(ModerationCommands::untimeout)));
+        root.then(Commands.literal("unban")
+                .then(Commands.argument("uuid", StringArgumentType.word())
+                        .then(Commands.argument("username", StringArgumentType.word())
+                                .executes(ModerationCommands::unban))));
+        root.then(Commands.literal("audit")
+                .executes(context -> audit(context.getSource(), 10))
+                .then(Commands.argument("limit", IntegerArgumentType.integer(1, 20))
+                        .executes(context -> audit(context.getSource(),
+                                IntegerArgumentType.getInteger(context, "limit")))));
+        root.then(Commands.literal("inspect")
+                .then(Commands.argument("target", EntityArgument.player())
+                        .executes(context -> inspect(context.getSource(),
+                                EntityArgument.getPlayer(context, "target")))));
+        root.then(Commands.literal("punishments")
+                .then(Commands.argument("target", EntityArgument.player())
+                        .executes(context -> punishments(context.getSource(),
+                                EntityArgument.getPlayer(context, "target")))));
+
+        dispatcher.register(root);
     }
 
     private static int status(CommandSourceStack source) {
