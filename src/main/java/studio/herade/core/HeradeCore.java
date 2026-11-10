@@ -34,6 +34,8 @@ public final class HeradeCore implements ModInitializer {
     private static final VanishManager VANISH_MANAGER = new VanishManager();
     private static TimeoutManager timeoutManager;
     private static final BanExpiryManager BAN_EXPIRY_MANAGER = new BanExpiryManager();
+    private static final ChatRateLimiter CHAT_RATE_LIMITER = new ChatRateLimiter();
+    private static final JoinProtectionManager JOIN_PROTECTION = new JoinProtectionManager();
 
     @Override
     public void onInitialize() {
@@ -115,12 +117,31 @@ public final class HeradeCore implements ModInitializer {
                 }
                 return false;
             }
+
+            ChatRateLimiter.Decision decision = CHAT_RATE_LIMITER.check(sender.getUUID());
+            if (!decision.allowed()) {
+                if (decision.notifyPlayer()) {
+                    sender.sendSystemMessage(Component.literal("Слишком много сообщений. Сделай небольшую паузу."));
+                }
+                if (auditLog != null) {
+                    auditLog.append(null, "CHAT_RATE_LIMITED", sender.getUUID(), "rate threshold exceeded");
+                }
+                return false;
+            }
             return true;
         });
 
         ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> {
             VANISH_MANAGER.hideFromNewPlayer(handler.player);
             SESSION_TRACKER.joined(handler.player.getUUID(), handler.player.getName().getString());
+            int joinBurst = JOIN_PROTECTION.recordJoin(handler.player.getUUID(), System.currentTimeMillis());
+            if (joinBurst > 0) {
+                LOGGER.warn("Possible join flood detected: {} joins in the rolling window.", joinBurst);
+                if (auditLog != null) {
+                    auditLog.append(null, "POSSIBLE_JOIN_FLOOD", handler.player.getUUID(),
+                            "joins_in_20s=" + joinBurst);
+                }
+            }
             if (auditLog != null) {
                 auditLog.append(null, "PLAYER_JOIN", handler.player.getUUID(),
                         handler.player.getName().getString());
@@ -128,6 +149,7 @@ public final class HeradeCore implements ModInitializer {
         });
         ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> {
             VANISH_MANAGER.playerDisconnected(handler.player.getUUID());
+            CHAT_RATE_LIMITER.clear(handler.player.getUUID());
             SESSION_TRACKER.left(handler.player.getUUID(), handler.player.getName().getString());
             if (auditLog != null) {
                 auditLog.append(null, "PLAYER_LEAVE", handler.player.getUUID(),
