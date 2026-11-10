@@ -30,6 +30,12 @@ public final class ConfigManager {
             try (Reader reader = Files.newBufferedReader(file)) {
                 properties.load(reader);
             }
+            if (applyMissingDefaults(properties, defaults)) {
+                try (Writer writer = Files.newBufferedWriter(file)) {
+                    properties.store(writer,
+                            "Herade Core configuration. Keep API credentials in environment variables.");
+                }
+            }
         } catch (IOException exception) {
             HeradeCore.LOGGER.error("Could not load Herade Core configuration. Using safe defaults.", exception);
             return defaults;
@@ -73,6 +79,13 @@ public final class ConfigManager {
     }
 
     private static void writeDefaults(Path file, CoreConfig defaults) throws IOException {
+        Properties properties = defaultProperties(defaults);
+        try (Writer writer = Files.newBufferedWriter(file)) {
+            properties.store(writer, "Herade Core configuration. Keep API credentials in environment variables.");
+        }
+    }
+
+    private static Properties defaultProperties(CoreConfig defaults) {
         Properties properties = new Properties();
         properties.setProperty("authentication.enabled", Boolean.toString(defaults.authenticationEnabled()));
         properties.setProperty("authentication.api-base-url", defaults.apiBaseUrl());
@@ -94,10 +107,19 @@ public final class ConfigManager {
         properties.setProperty("protection.join-alert-cooldown-seconds",
                 Integer.toString(defaults.joinAlertCooldownSeconds()));
         properties.setProperty("security.api-token-env", "HERADE_CORE_API_TOKEN");
+        return properties;
+    }
 
-        try (Writer writer = Files.newBufferedWriter(file)) {
-            properties.store(writer, "Herade Core configuration. Keep API credentials in environment variables.");
+    private static boolean applyMissingDefaults(Properties properties, CoreConfig defaults) {
+        Properties defaultValues = defaultProperties(defaults);
+        boolean changed = false;
+        for (String key : defaultValues.stringPropertyNames()) {
+            if (!properties.containsKey(key)) {
+                properties.setProperty(key, defaultValues.getProperty(key));
+                changed = true;
+            }
         }
+        return changed;
     }
 
     private static boolean readBoolean(Properties properties, String key, boolean fallback) {
