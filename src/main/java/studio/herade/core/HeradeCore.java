@@ -7,6 +7,10 @@ import net.fabricmc.fabric.api.message.v1.ServerMessageEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
+import net.fabricmc.fabric.api.event.player.AttackEntityCallback;
+import net.fabricmc.fabric.api.event.player.UseEntityCallback;
+import net.minecraft.world.InteractionResult;
+import net.minecraft.server.level.ServerPlayer;
 import studio.herade.core.commands.ModerationCommands;
 import net.fabricmc.fabric.api.networking.v1.ServerLoginConnectionEvents;
 import net.minecraft.network.chat.Component;
@@ -67,6 +71,19 @@ public final class HeradeCore implements ModInitializer {
 
         CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) ->
                 ModerationCommands.register(dispatcher));
+
+        AttackEntityCallback.EVENT.register((player, level, hand, entity, hitResult) -> {
+            if (entity instanceof ServerPlayer target && VANISH_MANAGER.isVanished(target.getUUID())) {
+                return InteractionResult.FAIL;
+            }
+            return InteractionResult.PASS;
+        });
+        UseEntityCallback.EVENT.register((player, level, hand, entity, hitResult) -> {
+            if (entity instanceof ServerPlayer target && VANISH_MANAGER.isVanished(target.getUUID())) {
+                return InteractionResult.FAIL;
+            }
+            return InteractionResult.PASS;
+        });
 
         ServerLoginConnectionEvents.QUERY_START.register((listener, server, sender, synchronizer) -> {
             if (!config.authenticationEnabled()) {
