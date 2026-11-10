@@ -34,6 +34,7 @@ public final class HeradeCore implements ModInitializer {
     private static final VanishManager VANISH_MANAGER = new VanishManager();
     private static TimeoutManager timeoutManager;
     private static final BanExpiryManager BAN_EXPIRY_MANAGER = new BanExpiryManager();
+    private static final AuditMaintenanceManager AUDIT_MAINTENANCE_MANAGER = new AuditMaintenanceManager();
     private static ChatRateLimiter chatRateLimiter;
     private static JoinProtectionManager joinProtectionManager;
 
@@ -162,7 +163,10 @@ public final class HeradeCore implements ModInitializer {
         });
 
         ServerLifecycleEvents.SERVER_STOPPING.register(VANISH_MANAGER::clear);
-        ServerTickEvents.END_SERVER_TICK.register(BAN_EXPIRY_MANAGER::tick);
+        ServerTickEvents.END_SERVER_TICK.register(server -> {
+            BAN_EXPIRY_MANAGER.tick(server);
+            AUDIT_MAINTENANCE_MANAGER.tick();
+        });
 
         LOGGER.info("Herade Core {} initialized.", BuildInfo.VERSION);
         LOGGER.info("Configuration loaded: authentication={}, audit={}",
