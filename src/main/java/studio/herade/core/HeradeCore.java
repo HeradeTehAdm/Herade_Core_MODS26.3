@@ -5,6 +5,7 @@ import net.fabricmc.loader.api.FabricLoader;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
 import net.fabricmc.fabric.api.message.v1.ServerMessageEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
+import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import studio.herade.core.commands.ModerationCommands;
 import net.fabricmc.fabric.api.networking.v1.ServerLoginConnectionEvents;
@@ -32,6 +33,7 @@ public final class HeradeCore implements ModInitializer {
     private static final PlayerSessionTracker SESSION_TRACKER = new PlayerSessionTracker();
     private static final VanishManager VANISH_MANAGER = new VanishManager();
     private static TimeoutManager timeoutManager;
+    private static final BanExpiryManager BAN_EXPIRY_MANAGER = new BanExpiryManager();
 
     @Override
     public void onInitialize() {
@@ -134,6 +136,7 @@ public final class HeradeCore implements ModInitializer {
         });
 
         ServerLifecycleEvents.SERVER_STOPPING.register(VANISH_MANAGER::clear);
+        ServerTickEvents.END_SERVER_TICK.register(BAN_EXPIRY_MANAGER::tick);
 
         LOGGER.info("Herade Core {} initialized.", BuildInfo.VERSION);
         LOGGER.info("Configuration loaded: authentication={}, audit={}",
