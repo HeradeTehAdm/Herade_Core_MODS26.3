@@ -28,6 +28,7 @@ public final class HeradeCore implements ModInitializer {
     private static PunishmentStore punishmentStore;
     private static SecurityApiClient securityApiClient;
     private static final PlayerSessionTracker SESSION_TRACKER = new PlayerSessionTracker();
+    private static final VanishManager VANISH_MANAGER = new VanishManager();
 
     @Override
     public void onInitialize() {
@@ -102,6 +103,7 @@ public final class HeradeCore implements ModInitializer {
         });
 
         ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> {
+            VANISH_MANAGER.hideFromNewPlayer(handler.player);
             SESSION_TRACKER.joined(handler.player.getUUID(), handler.player.getName().getString());
             if (auditLog != null) {
                 auditLog.append(null, "PLAYER_JOIN", handler.player.getUUID(),
@@ -142,5 +144,9 @@ public final class HeradeCore implements ModInitializer {
 
     public static PlayerSessionTracker sessions() {
         return SESSION_TRACKER;
+    }
+
+    public static VanishManager vanish() {
+        return VANISH_MANAGER;
     }
 }
