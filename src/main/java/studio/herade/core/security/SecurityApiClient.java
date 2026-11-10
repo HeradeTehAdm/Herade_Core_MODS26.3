@@ -43,6 +43,10 @@ public final class SecurityApiClient {
 
         this.endpoint = base.resolve("api/v1/minecraft/verify");
         this.secret = System.getenv(TOKEN_ENV);
+        if (this.secret != null && !this.secret.isBlank()
+                && this.secret.getBytes(StandardCharsets.UTF_8).length < 32) {
+            throw new IllegalArgumentException(TOKEN_ENV + " must contain at least 32 UTF-8 bytes.");
+        }
         this.requestTimeout = Duration.ofSeconds(config.requestTimeoutSeconds());
         this.httpClient = HttpClient.newBuilder()
                 .connectTimeout(Duration.ofSeconds(config.connectTimeoutSeconds()))
