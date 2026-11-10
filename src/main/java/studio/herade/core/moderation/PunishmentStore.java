@@ -99,6 +99,35 @@ public final class PunishmentStore {
         return revoked;
     }
 
+    public synchronized boolean revokeActiveBansAndRecordPardon(UUID targetId, UUID actorId, String reason) {
+        if (targetId == null) {
+            return false;
+        }
+        long now = System.currentTimeMillis();
+        String revocationReason = encode(reason == null ? "" : reason);
+        java.util.ArrayList<String> records = new java.util.ArrayList<>();
+        for (Punishment punishment : findAll().values()) {
+            if (punishment.targetId().equals(targetId)
+                    && (punishment.type() == PunishmentType.BAN || punishment.type() == PunishmentType.TEMP_BAN)
+                    && punishment.isPersistentRestriction(now)) {
+                records.add("REVOKE\t" + punishment.id()
+                        + "\t" + (actorId == null ? "" : actorId)
+                        + "\t" + now
+                        + "\t" + revocationReason);
+            }
+        }
+        Punishment pardon = new Punishment(UUID.randomUUID(), targetId, actorId,
+                PunishmentType.PARDON, reason == null || reason.isBlank() ? "unban" : reason, now, 0);
+        records.add("ISSUE\t" + pardon.id()
+                + "\t" + pardon.targetId()
+                + "\t" + (pardon.actorId() == null ? "" : pardon.actorId())
+                + "\t" + pardon.type().name()
+                + "\t" + pardon.createdAtMillis()
+                + "\t" + pardon.expiresAtMillis()
+                + "\t" + encode(pardon.reason()));
+        return append(String.join(System.lineSeparator(), records));
+    }
+
     public synchronized List<Punishment> activeFor(UUID targetId) {
         if (targetId == null) {
             return List.of();
