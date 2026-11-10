@@ -16,6 +16,9 @@ public record Punishment(
             throw new IllegalArgumentException("Punishment id, target and type are required.");
         }
         reason = reason == null || reason.isBlank() ? "No reason provided" : reason.trim();
+        if (reason.length() > 500) {
+            throw new IllegalArgumentException("Punishment reason must be 500 characters or fewer.");
+        }
         if (createdAtMillis <= 0) {
             throw new IllegalArgumentException("Creation timestamp must be positive.");
         }
