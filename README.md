@@ -22,7 +22,7 @@
 
     gradle selfTest build --no-daemon
 
-JAR создаётся в build/libs/. Для Minecraft 26.3 Loom использует non-obfuscated runtime: отдельная задача remapJar и Mojang mappings не применяются. CI выполняет self-tests, проверяет метаданные и entrypoint внутри JAR, затем публикует только runtime JAR как артефакт GitHub Actions.
+JAR создаётся в build/libs/. Gradle запускается на JDK 26. Классы компилируются в совместимый с Mixin 0.8.7 формат Java 21, а серверу Minecraft 26.3 по-прежнему требуется Java 26. Для non-obfuscated runtime отдельная задача remapJar и Mojang mappings не применяются. CI выполняет self-tests, проверяет метаданные и entrypoint внутри JAR, затем публикует только runtime JAR как артефакт GitHub Actions.
 
 ## Уже реализовано
 
