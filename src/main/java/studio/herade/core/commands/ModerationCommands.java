@@ -25,6 +25,8 @@ public final class ModerationCommands {
                 .requires(source -> source.permissions().hasPermission(Permissions.COMMANDS_MODERATOR))
                 .then(Commands.literal("status")
                         .executes(context -> status(context.getSource())))
+                .then(Commands.literal("vanish")
+                        .executes(context -> toggleVanish(context.getSource())))
                 .then(Commands.literal("inspect")
                         .then(Commands.argument("target", EntityArgument.player())
                                 .executes(context -> inspect(context.getSource(),
@@ -41,6 +43,18 @@ public final class ModerationCommands {
                         + " | auth=" + HeradeCore.config().authenticationEnabled()
                         + " | audit=" + HeradeCore.config().auditEnabled()
                         + " | online=" + HeradeCore.sessions().onlineCount()), false);
+        return 1;
+    }
+
+    private static int toggleVanish(CommandSourceStack source) throws com.mojang.brigadier.exceptions.CommandSyntaxException {
+        ServerPlayer player = source.getPlayerOrException();
+        boolean vanished = HeradeCore.vanish().toggle(source.getServer(), player);
+        if (HeradeCore.auditLog() != null) {
+            HeradeCore.auditLog().append(player.getUUID(),
+                    vanished ? "VANISH_ENABLED" : "VANISH_DISABLED", player.getUUID(), "moderator command");
+        }
+        source.sendSuccess(() -> Component.literal(
+                vanished ? "Vanish включён." : "Vanish выключен."), false);
         return 1;
     }
 
