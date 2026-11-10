@@ -57,6 +57,26 @@ public final class PunishmentStore {
                 + "\t" + encode(reason == null ? "" : reason));
     }
 
+    public synchronized int revokeActiveRestrictions(UUID targetId, UUID actorId, String reason) {
+        if (targetId == null) {
+            return 0;
+        }
+        int revoked = 0;
+        long now = System.currentTimeMillis();
+        for (Punishment punishment : findAll().values()) {
+            if (punishment.targetId().equals(targetId) && punishment.isPersistentRestriction(now)) {
+                boolean saved = append("REVOKE\t" + punishment.id()
+                        + "\t" + (actorId == null ? "" : actorId)
+                        + "\t" + now
+                        + "\t" + encode(reason == null ? "" : reason));
+                if (saved) {
+                    revoked++;
+                }
+            }
+        }
+        return revoked;
+    }
+
     public synchronized List<Punishment> activeFor(UUID targetId) {
         if (targetId == null) {
             return List.of();
