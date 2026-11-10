@@ -2,6 +2,7 @@ package studio.herade.core;
 
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.loader.api.FabricLoader;
+import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
 import studio.herade.core.moderation.PunishmentStore;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -28,6 +29,19 @@ public final class HeradeCore implements ModInitializer {
                     .resolve("audit.log");
             auditLog = new AuditLog(auditPath, config.auditRetentionDays());
         }
+
+        ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> {
+            if (auditLog != null) {
+                auditLog.append(null, "PLAYER_JOIN", handler.player.getUUID(),
+                        handler.player.getName().getString());
+            }
+        });
+        ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> {
+            if (auditLog != null) {
+                auditLog.append(null, "PLAYER_LEAVE", handler.player.getUUID(),
+                        handler.player.getName().getString());
+            }
+        });
 
         LOGGER.info("Herade Core {} initialized.", BuildInfo.VERSION);
         LOGGER.info("Configuration loaded: authentication={}, audit={}",
