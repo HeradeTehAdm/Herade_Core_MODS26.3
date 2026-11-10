@@ -94,7 +94,7 @@ public final class SecurityApiClient {
                     }
                     if (response.statusCode() == 403) {
                         java.util.regex.Matcher matcher = java.util.regex.Pattern
-                                .compile("\\\"challenge\\\"\\s*:\\s*\\\"([0-9]{6})\\\"")
+                                .compile("\\\"challenge\\\"\\s*:\\s*\\\"([0-9]{8})\\\"")
                                 .matcher(response.body());
                         if (matcher.find()) {
                             return new VerificationResult(VerificationStatus.CHALLENGE, matcher.group(1));
