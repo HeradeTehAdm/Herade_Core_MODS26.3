@@ -11,6 +11,7 @@ import java.util.concurrent.ConcurrentHashMap;
 public final class TimeoutManager {
     private final Map<UUID, Long> expirations = new ConcurrentHashMap<>();
     private final Map<UUID, Long> lastNotice = new ConcurrentHashMap<>();
+    private int ticksUntilPrune;
 
     public TimeoutManager(PunishmentStore store) {
         long now = System.currentTimeMillis();
@@ -19,6 +20,20 @@ public final class TimeoutManager {
                 expirations.merge(punishment.targetId(), punishment.expiresAtMillis(), Math::max);
             }
         }
+    }
+
+    public void tick() {
+        if (++ticksUntilPrune < 20) {
+            return;
+        }
+        ticksUntilPrune = 0;
+        pruneExpired();
+    }
+
+    public void pruneExpired() {
+        long now = System.currentTimeMillis();
+        expirations.entrySet().removeIf(entry -> entry.getValue() <= now);
+        lastNotice.keySet().removeIf(playerId -> !expirations.containsKey(playerId));
     }
 
     public void apply(UUID playerId, long expiresAtMillis) {
