@@ -48,6 +48,8 @@ public final class CoreSelfTest {
 
         expectIllegalArgument(() -> new Punishment(UUID.randomUUID(), target, null, PunishmentType.TIMEOUT,
                 "invalid", created, 0), "temporary timeout must require an expiry");
+        expectIllegalArgument(() -> new Punishment(UUID.randomUUID(), target, null, PunishmentType.BAN,
+                "x".repeat(501), created, 0), "punishment reason must be bounded");
         System.out.println("[Herade Core] Punishment model: OK");
     }
 
