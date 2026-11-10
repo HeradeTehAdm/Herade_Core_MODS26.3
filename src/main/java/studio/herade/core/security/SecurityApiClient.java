@@ -33,8 +33,8 @@ public final class SecurityApiClient {
         String configuredUrl = config.apiBaseUrl().trim();
         URI base = URI.create(configuredUrl.endsWith("/") ? configuredUrl : configuredUrl + "/");
         if (!"https".equalsIgnoreCase(base.getScheme()) || base.getHost() == null
-                || base.getUserInfo() != null || base.getFragment() != null) {
-            throw new IllegalArgumentException("Security API must be an HTTPS URL without user-info or fragment.");
+                || base.getUserInfo() != null || base.getFragment() != null || base.getRawQuery() != null) {
+            throw new IllegalArgumentException("Security API must be an HTTPS base URL without user-info, query or fragment.");
         }
 
         this.endpoint = base.resolve("api/v1/minecraft/verify");
