@@ -45,3 +45,12 @@ processResources {
         expand "version": project.version
     }
 }
+
+tasks.register('selfTest', JavaExec) {
+    group = 'verification'
+    description = 'Runs Herade Core persistence and model self-tests.'
+    dependsOn testClasses
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'studio.herade.core.CoreSelfTest'
+    enableAssertions = true
+}
