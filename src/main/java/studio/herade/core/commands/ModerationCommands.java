@@ -106,9 +106,13 @@ public final class ModerationCommands {
         long now = System.currentTimeMillis();
         UUID actorId = source.getEntity() instanceof ServerPlayer actor ? actor.getUUID() : null;
 
+        Punishment punishment = new Punishment(
+                UUID.randomUUID(), target.getUUID(), actorId, PunishmentType.KICK, reason, now, 0);
+        if (!HeradeCore.punishmentStore().issue(punishment)) {
+            source.sendFailure(Component.literal("Не удалось сохранить наказание. Игрок не был отключён."));
+            return 0;
+        }
         target.connection.disconnect(Component.literal("Кик с сервера. Причина: " + reason));
-        HeradeCore.punishmentStore().issue(new Punishment(
-                UUID.randomUUID(), target.getUUID(), actorId, PunishmentType.KICK, reason, now, 0));
         recordModerationAction(actorId, target.getUUID(), "KICK", reason);
         source.sendSuccess(() -> Component.literal(
                 "Игрок " + target.getName().getString() + " отключён. Причина: " + reason), true);
@@ -132,8 +136,13 @@ public final class ModerationCommands {
         }
 
         PunishmentType type = minutes > 0 ? PunishmentType.TEMP_BAN : PunishmentType.BAN;
-        HeradeCore.punishmentStore().issue(new Punishment(
-                UUID.randomUUID(), target.getUUID(), actorId, type, reason, now, expiresAt));
+        Punishment punishment = new Punishment(
+                UUID.randomUUID(), target.getUUID(), actorId, type, reason, now, expiresAt);
+        if (!HeradeCore.punishmentStore().issue(punishment)) {
+            source.getServer().getPlayerList().getBans().remove(identity);
+            source.sendFailure(Component.literal("Не удалось сохранить наказание. Блокировка отменена."));
+            return 0;
+        }
         recordModerationAction(actorId, target.getUUID(), type.name(), reason);
         target.connection.disconnect(Component.literal(
                 (minutes > 0 ? "Временная блокировка" : "Постоянная блокировка")
