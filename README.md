@@ -29,7 +29,8 @@ JAR создаётся в build/libs/. Gradle запускается на JDK 26
 - Серверный entrypoint и конфигурация в config/herade-core/herade-core.properties.
 - Персистентный аудит событий в audit.log, с ограничением срока хранения.
 - Журнал наказаний в punishments.journal: BAN, TEMP_BAN, KICK и TIMEOUT; проверка срока действия и отзыв записей.
-- Команды модератора: /herade status, /herade inspect, /herade punishments, /herade audit, /herade kick, /herade ban, /herade tempban, /herade unban, /herade timeout, /herade untimeout и /herade vanish.
+- Команды модератора: /herade status, /herade diagnostics, /herade inspect, /herade punishments, /herade audit, /herade kick, /herade ban, /herade tempban, /herade unban, /herade timeout, /herade untimeout и /herade vanish.
+- Инспекция игрока показывает UUID, координаты, измерение, режим игры, здоровье, активные эффекты, статус vanish, время входа и последние события аудита.
 - Используется встроенная permission-система Minecraft, без собственной иерархии привилегий.
 - HMAC-SHA256 HTTPS-клиент для DS_Hereid.
 - Шлюз входа по аутентифицированному UUID, одноразовый challenge и режим fail-closed.
@@ -69,7 +70,7 @@ API бота слушает HTTP на loopback по умолчанию. Для �
 
 ## Следующие этапы
 
-- Расширенная инспекция игрока: режим игры, пинг и более подробная история сессий.
+- Показ пинга и более подробная история сессий в инспекции игрока.
 - Доработка vanish для полного исключения взаимодействия и проверки видимости во всех клиентских сценариях.
 - Телепортация, защита от спама/рейдов и диагностика.
 - Проверки совместимости с другими Fabric-модами и нагрузочные тесты.
