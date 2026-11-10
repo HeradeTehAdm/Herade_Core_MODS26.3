@@ -95,11 +95,9 @@ public final class SecurityApiClient {
                         return new VerificationResult(VerificationStatus.APPROVED, null);
                     }
                     if (response.statusCode() == 403) {
-                        java.util.regex.Matcher matcher = java.util.regex.Pattern
-                                .compile("\\\"challenge\\\"\\s*:\\s*\\\"([0-9]{8})\\\"")
-                                .matcher(response.body());
-                        if (matcher.find()) {
-                            return new VerificationResult(VerificationStatus.CHALLENGE, matcher.group(1));
+                        String challenge = extractChallengeCode(response.body());
+                        if (challenge != null) {
+                            return new VerificationResult(VerificationStatus.CHALLENGE, challenge);
                         }
                         return new VerificationResult(VerificationStatus.DENIED, null);
                     }
@@ -113,7 +111,15 @@ public final class SecurityApiClient {
                 });
     }
 
-    private static String sign(String value, String key) throws GeneralSecurityException {
+    static String extractChallengeCode(String body) {
+        if (body == null) return null;
+        java.util.regex.Matcher matcher = java.util.regex.Pattern
+                .compile("\\\"challenge\\\"\\s*:\\s*\\\"([0-9]{8})\\\"")
+                .matcher(body);
+        return matcher.find() ? matcher.group(1) : null;
+    }
+
+    static String sign(String value, String key) throws GeneralSecurityException {
         Mac mac = Mac.getInstance("HmacSHA256");
         mac.init(new SecretKeySpec(key.getBytes(StandardCharsets.UTF_8), "HmacSHA256"));
         return HexFormat.of().formatHex(mac.doFinal(value.getBytes(StandardCharsets.UTF_8)));
