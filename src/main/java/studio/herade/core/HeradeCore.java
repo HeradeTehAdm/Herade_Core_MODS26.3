@@ -5,9 +5,9 @@ import net.fabricmc.loader.api.FabricLoader;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
 import net.fabricmc.fabric.api.networking.v1.ServerLoginConnectionEvents;
 import net.minecraft.network.chat.Component;
-import net.minecraft.server.network.ServerLoginPacketListenerImpl;
 import studio.herade.core.mixin.ServerLoginPacketListenerAccessor;
 import studio.herade.core.security.SecurityApiClient.VerificationResult;
+import studio.herade.core.security.SecurityApiClient.VerificationStatus;
 
 import java.util.concurrent.CompletableFuture;
 import studio.herade.core.moderation.PunishmentStore;
@@ -76,13 +76,17 @@ public final class HeradeCore implements ModInitializer {
 
                 VerificationResult result = securityApiClient.verify(profile.id(), profile.name()).join();
                 if (auditLog != null) {
-                    auditLog.append(null, "LOGIN_VERIFICATION_" + result.name(), profile.id(), profile.name());
+                    auditLog.append(null, "LOGIN_VERIFICATION_" + result.status().name(), profile.id(), profile.name());
                 }
 
-                if (result == VerificationResult.DENIED) {
+                if (result.status() == VerificationStatus.CHALLENGE && result.challengeCode() != null) {
                     listener.disconnect(Component.literal(
-                            "Доступ не подтверждён. Заверши регистрацию через Discord-бота HeradeLegend."));
-                } else if (result == VerificationResult.UNAVAILABLE && config.failClosed()) {
+                            "Подтверди привязку в Discord: одноразовый код " + result.challengeCode()
+                                    + ". Выполни /minecraft confirm с этим кодом."));
+                } else if (result.status() == VerificationStatus.DENIED) {
+                    listener.disconnect(Component.literal(
+                            "Доступ не подтверждён. Создай или проверь заявку через Discord-бота HeradeLegend."));
+                } else if (result.status() == VerificationStatus.UNAVAILABLE && config.failClosed()) {
                     listener.disconnect(Component.literal(
                             "Сервис авторизации временно недоступен. Попробуй войти позже."));
                 }
