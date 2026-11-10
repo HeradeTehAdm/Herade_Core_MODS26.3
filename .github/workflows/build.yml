@@ -35,5 +35,8 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: herade-core
-          path: build/libs/*.jar
+          path: |
+            build/libs/herade-core-*.jar
+            !build/libs/*-sources.jar
+            !build/libs/*-dev.jar
           if-no-files-found: error
