@@ -10,9 +10,9 @@ This repository is being initialized from an empty repository. The first commit 
 
 - Minecraft 26.3
 - Fabric Loader 0.20.1 or newer
-- Fabric API 0.162.0+26.3
+- Fabric API 0.166.0+26.3
 - Java 26
-- Gradle 9.7.1
+- Gradle 9.8.0
 
 Version values are maintained in `gradle.properties`.
 
