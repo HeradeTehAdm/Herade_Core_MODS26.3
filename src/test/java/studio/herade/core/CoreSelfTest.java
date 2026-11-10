@@ -97,6 +97,7 @@ public final class CoreSelfTest {
                     "active timeout should be revocable");
             TimeoutManager reopened = new TimeoutManager(store);
             check(!reopened.isTimedOut(target), "revoked timeout should not be restored");
+        check(!reopened.shouldNotify(null), "timeout notice must reject a null player id");
         } finally {
             deleteTree(directory);
         }
