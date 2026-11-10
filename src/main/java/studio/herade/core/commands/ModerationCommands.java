@@ -48,6 +48,14 @@ public final class ModerationCommands {
                                         .then(Commands.argument("reason", StringArgumentType.greedyString())
                                                 .executes(context -> ban(context,
                                                         IntegerArgumentType.getInteger(context, "minutes")))))))
+                .then(Commands.literal("timeout")
+                        .then(Commands.argument("target", EntityArgument.player())
+                                .then(Commands.argument("minutes", IntegerArgumentType.integer(1, 525600))
+                                        .then(Commands.argument("reason", StringArgumentType.greedyString())
+                                                .executes(context -> timeout(context))))))
+                .then(Commands.literal("untimeout")
+                        .then(Commands.argument("target", EntityArgument.player())
+                                .executes(context -> untimeout(context))))
                 .then(Commands.literal("unban")
                         .then(Commands.argument("uuid", StringArgumentType.word())
                                 .then(Commands.argument("username", StringArgumentType.word())
@@ -131,6 +139,47 @@ public final class ModerationCommands {
                 "Игрок " + target.getName().getString()
                         + (minutes > 0 ? " заблокирован на " + minutes + " мин." : " заблокирован.")
                         + " Причина: " + reason), true);
+        return 1;
+    }
+
+    private static int timeout(CommandContext<CommandSourceStack> context) {
+        CommandSourceStack source = context.getSource();
+        ServerPlayer target = EntityArgument.getPlayer(context, "target");
+        int minutes = IntegerArgumentType.getInteger(context, "minutes");
+        String reason = StringArgumentType.getString(context, "reason");
+        long now = System.currentTimeMillis();
+        long expiresAt = Math.addExact(now, Math.multiplyExact(minutes, 60_000L));
+        UUID actorId = source.getEntity() instanceof ServerPlayer actor ? actor.getUUID() : null;
+
+        Punishment punishment = new Punishment(UUID.randomUUID(), target.getUUID(), actorId,
+                PunishmentType.TIMEOUT, reason, now, expiresAt);
+        if (!HeradeCore.punishmentStore().issue(punishment)) {
+            source.sendFailure(Component.literal("Не удалось сохранить timeout."));
+            return 0;
+        }
+        HeradeCore.timeouts().apply(target.getUUID(), expiresAt);
+        recordModerationAction(actorId, target.getUUID(), "TIMEOUT", reason);
+        target.sendSystemMessage(Component.literal("Тебе временно запрещено писать в чат. Причина: " + reason));
+        source.sendSuccess(() -> Component.literal(
+                "Игрок " + target.getName().getString() + " получил timeout на " + minutes + " мин."), true);
+        return 1;
+    }
+
+    private static int untimeout(CommandContext<CommandSourceStack> context) {
+        CommandSourceStack source = context.getSource();
+        ServerPlayer target = EntityArgument.getPlayer(context, "target");
+        UUID actorId = source.getEntity() instanceof ServerPlayer actor ? actor.getUUID() : null;
+        int revoked = HeradeCore.punishmentStore().revokeActiveTimeouts(
+                target.getUUID(), actorId, "untimeout");
+        boolean cleared = HeradeCore.timeouts().clear(target.getUUID());
+        if (revoked == 0 && !cleared) {
+            source.sendFailure(Component.literal("Активный timeout для игрока не найден."));
+            return 0;
+        }
+        recordModerationAction(actorId, target.getUUID(), "UNTIMEOUT", "untimeout");
+        target.sendSystemMessage(Component.literal("Твой timeout снят."));
+        source.sendSuccess(() -> Component.literal(
+                "Timeout снят для " + target.getName().getString() + "."), true);
         return 1;
     }
 
