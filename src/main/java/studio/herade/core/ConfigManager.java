@@ -48,6 +48,18 @@ public final class ConfigManager {
         int retentionDays = readBoundedInt(properties, "audit.retention-days",
                 defaults.auditRetentionDays(), 1, 365);
         boolean logPlayerIps = readBoolean(properties, "privacy.log-player-ips", defaults.logPlayerIps());
+        int chatMaxMessages = readBoundedInt(properties, "protection.chat-max-messages",
+                defaults.chatMaxMessages(), 1, 30);
+        int chatWindowSeconds = readBoundedInt(properties, "protection.chat-window-seconds",
+                defaults.chatWindowSeconds(), 1, 60);
+        int chatNoticeCooldownSeconds = readBoundedInt(properties, "protection.chat-notice-cooldown-seconds",
+                defaults.chatNoticeCooldownSeconds(), 1, 60);
+        int joinFloodThreshold = readBoundedInt(properties, "protection.join-flood-threshold",
+                defaults.joinFloodThreshold(), 3, 100);
+        int joinFloodWindowSeconds = readBoundedInt(properties, "protection.join-flood-window-seconds",
+                defaults.joinFloodWindowSeconds(), 5, 120);
+        int joinAlertCooldownSeconds = readBoundedInt(properties, "protection.join-alert-cooldown-seconds",
+                defaults.joinAlertCooldownSeconds(), 10, 3600);
 
         if (authenticationEnabled && apiBaseUrl.isBlank()) {
             HeradeCore.LOGGER.warn("Authentication is enabled but authentication.api-base-url is empty. "
@@ -55,7 +67,9 @@ public final class ConfigManager {
         }
 
         return new CoreConfig(authenticationEnabled, apiBaseUrl, connectTimeout, requestTimeout,
-                failClosed, auditEnabled, retentionDays, logPlayerIps);
+                failClosed, auditEnabled, retentionDays, logPlayerIps,
+                chatMaxMessages, chatWindowSeconds, chatNoticeCooldownSeconds,
+                joinFloodThreshold, joinFloodWindowSeconds, joinAlertCooldownSeconds);
     }
 
     private static void writeDefaults(Path file, CoreConfig defaults) throws IOException {
@@ -70,6 +84,15 @@ public final class ConfigManager {
         properties.setProperty("audit.enabled", Boolean.toString(defaults.auditEnabled()));
         properties.setProperty("audit.retention-days", Integer.toString(defaults.auditRetentionDays()));
         properties.setProperty("privacy.log-player-ips", Boolean.toString(defaults.logPlayerIps()));
+        properties.setProperty("protection.chat-max-messages", Integer.toString(defaults.chatMaxMessages()));
+        properties.setProperty("protection.chat-window-seconds", Integer.toString(defaults.chatWindowSeconds()));
+        properties.setProperty("protection.chat-notice-cooldown-seconds",
+                Integer.toString(defaults.chatNoticeCooldownSeconds()));
+        properties.setProperty("protection.join-flood-threshold", Integer.toString(defaults.joinFloodThreshold()));
+        properties.setProperty("protection.join-flood-window-seconds",
+                Integer.toString(defaults.joinFloodWindowSeconds()));
+        properties.setProperty("protection.join-alert-cooldown-seconds",
+                Integer.toString(defaults.joinAlertCooldownSeconds()));
         properties.setProperty("security.api-token-env", "HERADE_CORE_API_TOKEN");
 
         try (Writer writer = Files.newBufferedWriter(file)) {
