@@ -31,8 +31,14 @@ public final class PunishmentStore {
         }
     }
 
-    public synchronized void issue(Punishment punishment) {
-        append("ISSUE\t" + punishment.id()
+    public synchronized boolean issue(Punishment punishment) {
+        if (punishment == null) {
+            throw new IllegalArgumentException("Punishment is required.");
+        }
+        if (findAll().containsKey(punishment.id())) {
+            return false;
+        }
+        return append("ISSUE\t" + punishment.id()
                 + "\t" + punishment.targetId()
                 + "\t" + (punishment.actorId() == null ? "" : punishment.actorId())
                 + "\t" + punishment.type().name()
@@ -45,14 +51,16 @@ public final class PunishmentStore {
         if (punishmentId == null || !findAll().containsKey(punishmentId)) {
             return false;
         }
-        append("REVOKE\t" + punishmentId
+        return append("REVOKE\t" + punishmentId
                 + "\t" + (actorId == null ? "" : actorId)
                 + "\t" + System.currentTimeMillis()
                 + "\t" + encode(reason == null ? "" : reason));
-        return true;
     }
 
     public synchronized List<Punishment> activeFor(UUID targetId) {
+        if (targetId == null) {
+            return List.of();
+        }
         long now = System.currentTimeMillis();
         return findAll().values().stream()
                 .filter(p -> p.targetId().equals(targetId) && p.isPersistentRestriction(now))
@@ -65,6 +73,9 @@ public final class PunishmentStore {
 
     private Map<UUID, Punishment> findAll() {
         Map<UUID, Punishment> punishments = new LinkedHashMap<>();
+        if (Files.notExists(file)) {
+            return punishments;
+        }
         try {
             for (String line : Files.readAllLines(file, StandardCharsets.UTF_8)) {
                 String[] fields = line.split("\\t", -1);
@@ -96,12 +107,14 @@ public final class PunishmentStore {
         return punishments;
     }
 
-    private void append(String line) {
+    private boolean append(String line) {
         try {
             Files.writeString(file, line + System.lineSeparator(), StandardCharsets.UTF_8,
                     StandardOpenOption.CREATE, StandardOpenOption.WRITE, StandardOpenOption.APPEND);
+            return true;
         } catch (IOException exception) {
             HeradeCore.LOGGER.error("Could not append punishment journal entry.", exception);
+            return false;
         }
     }
 
