@@ -132,6 +132,23 @@ public final class CoreSelfTest {
                     "untimeout should revoke exactly the timeout record");
             check(store.activeFor(target).isEmpty(),
                     "all restrictions should be cleared after their scoped revocations");
+
+            UUID atomicTarget = UUID.randomUUID();
+            long atomicNow = System.currentTimeMillis();
+            Punishment atomicBan = new Punishment(UUID.randomUUID(), atomicTarget, null,
+                    PunishmentType.BAN, "atomic unban test", atomicNow, 0);
+            Punishment unrelatedTimeout = new Punishment(UUID.randomUUID(), atomicTarget, null,
+                    PunishmentType.TIMEOUT, "must remain active", atomicNow, atomicNow + 60_000);
+            check(store.issue(atomicBan), "atomic unban ban should be persisted");
+            check(store.issue(unrelatedTimeout), "atomic unban timeout should be persisted");
+            check(store.revokeActiveBansAndRecordPardon(atomicTarget, null, "atomic test"),
+                    "unban transition and pardon should be written together");
+            var atomicRemaining = store.activeFor(atomicTarget);
+            check(atomicRemaining.size() == 1 && atomicRemaining.get(0).type() == PunishmentType.TIMEOUT,
+                    "atomic unban must preserve unrelated timeout");
+            check(store.all().stream().anyMatch(p -> p.targetId().equals(atomicTarget)
+                            && p.type() == PunishmentType.PARDON),
+                    "atomic unban must persist a pardon history record");
         } finally {
             deleteTree(directory);
         }
