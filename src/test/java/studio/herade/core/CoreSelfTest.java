@@ -21,6 +21,7 @@ public final class CoreSelfTest {
         testTimeoutPersistence();
         testChatRateLimiter();
         testJoinProtection();
+        testPlayerSessions();
         testAuditPersistence();
         System.out.println("[Herade Core] All self-tests passed.");
     }
@@ -126,6 +127,22 @@ public final class CoreSelfTest {
         check(protection.recordJoin(UUID.randomUUID(), 10_900) == 0,
                 "join flood alert should respect its cooldown");
         System.out.println("[Herade Core] Join protection: OK");
+    }
+
+    private static void testPlayerSessions() {
+        PlayerSessionTracker tracker = new PlayerSessionTracker();
+        UUID player = UUID.randomUUID();
+        tracker.joined(player, "SessionTester");
+        check(tracker.onlineCount() == 1, "joined player should count as online");
+        PlayerSessionTracker.Session active = tracker.find(player).orElseThrow();
+        check(active.online() && "SessionTester".equals(active.playerName()),
+                "session should retain the player's online state and name");
+        tracker.left(player, "SessionTester");
+        PlayerSessionTracker.Session offline = tracker.find(player).orElseThrow();
+        check(!offline.online() && offline.lastSeenAtMillis() >= active.joinedAtMillis(),
+                "disconnect should retain last-seen time");
+        check(tracker.onlineCount() == 0, "disconnected player should not count as online");
+        System.out.println("[Herade Core] Player sessions: OK");
     }
 
     private static void testAuditPersistence() throws Exception {
