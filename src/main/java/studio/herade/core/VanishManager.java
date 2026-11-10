@@ -33,6 +33,12 @@ public final class VanishManager {
         return true;
     }
 
+    public void playerDisconnected(UUID playerId) {
+        if (playerId != null) {
+            vanishedPlayers.remove(playerId);
+        }
+    }
+
     public void hideFromNewPlayer(ServerPlayer joiningPlayer) {
         if (joiningPlayer == null || vanishedPlayers.isEmpty()) {
             return;
