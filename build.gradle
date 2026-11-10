@@ -35,7 +35,7 @@ java {
 }
 
 tasks.withType(JavaCompile).configureEach {
-    options.release = 26
+    options.release = 21
     options.encoding = 'UTF-8'
 }
 
