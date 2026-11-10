@@ -74,8 +74,10 @@ public final class CoreSelfTest {
             AuditLog audit = new AuditLog(file, 30);
             UUID target = UUID.randomUUID();
             audit.append(null, "TEST_EVENT", target, "reason with tabs\tand newline\n");
-            String contents = Files.readString(file);
-            check(contents.contains("TEST_EVENT"), "audit action should be persisted");
+            String contents = Files.readString(file).trim();
+            String[] fields = contents.split("\\t", -1);
+            check(fields.length == 5, "audit event should contain five encoded fields");
+            check("TEST_EVENT".equals(AuditLog.decodeField(fields[2])), "audit action should be persisted");
             check(contents.lines().count() == 1, "encoded audit fields must remain on one line");
             audit.pruneExpired();
             check(Files.exists(file), "audit file should remain after pruning");
