@@ -246,23 +246,24 @@ public final class ModerationCommands {
 
         String username = existing.getUser().name();
         UUID actorId = source.getEntity() instanceof ServerPlayer actor ? actor.getUUID() : null;
-        long now = System.currentTimeMillis();
-        long activeBans = HeradeCore.punishmentStore().activeFor(playerId).stream()
-                .filter(punishment -> punishment.type() == PunishmentType.BAN
-                        || punishment.type() == PunishmentType.TEMP_BAN).count();
-        int revokedBans = HeradeCore.punishmentStore().revokeActiveBans(playerId, actorId, "unban");
-        if (revokedBans != activeBans) {
-            source.sendFailure(Component.literal(
-                    "Не удалось полностью записать снятие блокировки в журнал. Повтори команду."));
-            return 0;
-        }
         if (!source.getServer().getPlayerList().getBans().remove(existing.getUser())) {
             source.sendFailure(Component.literal("Не удалось удалить блокировку из списка Minecraft."));
             return 0;
         }
-        HeradeCore.punishmentStore().issue(new Punishment(
-                UUID.randomUUID(), playerId, actorId, PunishmentType.PARDON,
-                "unban", now, 0));
+        if (!HeradeCore.punishmentStore().revokeActiveBansAndRecordPardon(
+                playerId, actorId, "unban")) {
+            boolean restored = source.getServer().getPlayerList().getBans().add(existing);
+            if (!restored) {
+                HeradeCore.LOGGER.error("CRITICAL: failed to restore vanilla ban for {} after journal write failure.",
+                        playerId);
+                source.sendFailure(Component.literal(
+                        "Ошибка журнала и восстановления блокировки. Требуется проверка консоли сервера."));
+                return 0;
+            }
+            source.sendFailure(Component.literal(
+                    "Не удалось записать снятие блокировки в журнал. Блокировка восстановлена."));
+            return 0;
+        }
         recordModerationAction(actorId, playerId, "UNBAN", "unban");
         source.sendSuccess(() -> Component.literal("Блокировка снята: " + username + " (" + playerId + ")."), true);
         return 1;
