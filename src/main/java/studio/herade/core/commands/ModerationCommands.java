@@ -103,6 +103,7 @@ public final class ModerationCommands {
         CommandSourceStack source = context.getSource();
         ServerPlayer target = EntityArgument.getPlayer(context, "target");
         String reason = StringArgumentType.getString(context, "reason");
+        if (!validateReason(source, reason)) return 0;
         long now = System.currentTimeMillis();
         UUID actorId = source.getEntity() instanceof ServerPlayer actor ? actor.getUUID() : null;
 
@@ -123,6 +124,7 @@ public final class ModerationCommands {
         CommandSourceStack source = context.getSource();
         ServerPlayer target = EntityArgument.getPlayer(context, "target");
         String reason = StringArgumentType.getString(context, "reason");
+        if (!validateReason(source, reason)) return 0;
         long now = System.currentTimeMillis();
         long expiresAt = minutes > 0 ? Math.addExact(now, Math.multiplyExact(minutes, 60_000L)) : 0L;
         Date expiry = expiresAt == 0 ? null : new Date(expiresAt);
@@ -159,6 +161,7 @@ public final class ModerationCommands {
         ServerPlayer target = EntityArgument.getPlayer(context, "target");
         int minutes = IntegerArgumentType.getInteger(context, "minutes");
         String reason = StringArgumentType.getString(context, "reason");
+        if (!validateReason(source, reason)) return 0;
         long now = System.currentTimeMillis();
         long expiresAt = Math.addExact(now, Math.multiplyExact(minutes, 60_000L));
         UUID actorId = source.getEntity() instanceof ServerPlayer actor ? actor.getUUID() : null;
@@ -222,6 +225,18 @@ public final class ModerationCommands {
         recordModerationAction(actorId, playerId, "UNBAN", "unban");
         source.sendSuccess(() -> Component.literal("Блокировка снята: " + username + " (" + playerId + ")."), true);
         return 1;
+    }
+
+    private static boolean validateReason(CommandSourceStack source, String reason) {
+        if (reason == null || reason.isBlank()) {
+            source.sendFailure(Component.literal("Укажи причину наказания."));
+            return false;
+        }
+        if (reason.trim().length() > 500) {
+            source.sendFailure(Component.literal("Причина не должна превышать 500 символов."));
+            return false;
+        }
+        return true;
     }
 
     private static void recordModerationAction(UUID actorId, UUID targetId, String action, String reason) {
