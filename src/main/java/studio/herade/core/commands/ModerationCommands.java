@@ -99,7 +99,7 @@ public final class ModerationCommands {
         return 1;
     }
 
-    private static int kick(CommandContext<CommandSourceStack> context) {
+    private static int kick(CommandContext<CommandSourceStack> context) throws com.mojang.brigadier.exceptions.CommandSyntaxException {
         CommandSourceStack source = context.getSource();
         ServerPlayer target = EntityArgument.getPlayer(context, "target");
         String reason = StringArgumentType.getString(context, "reason");
@@ -115,7 +115,7 @@ public final class ModerationCommands {
         return 1;
     }
 
-    private static int ban(CommandContext<CommandSourceStack> context, int minutes) {
+    private static int ban(CommandContext<CommandSourceStack> context, int minutes) throws com.mojang.brigadier.exceptions.CommandSyntaxException {
         CommandSourceStack source = context.getSource();
         ServerPlayer target = EntityArgument.getPlayer(context, "target");
         String reason = StringArgumentType.getString(context, "reason");
@@ -145,7 +145,7 @@ public final class ModerationCommands {
         return 1;
     }
 
-    private static int timeout(CommandContext<CommandSourceStack> context) {
+    private static int timeout(CommandContext<CommandSourceStack> context) throws com.mojang.brigadier.exceptions.CommandSyntaxException {
         CommandSourceStack source = context.getSource();
         ServerPlayer target = EntityArgument.getPlayer(context, "target");
         int minutes = IntegerArgumentType.getInteger(context, "minutes");
@@ -168,7 +168,7 @@ public final class ModerationCommands {
         return 1;
     }
 
-    private static int untimeout(CommandContext<CommandSourceStack> context) {
+    private static int untimeout(CommandContext<CommandSourceStack> context) throws com.mojang.brigadier.exceptions.CommandSyntaxException {
         CommandSourceStack source = context.getSource();
         ServerPlayer target = EntityArgument.getPlayer(context, "target");
         UUID actorId = source.getEntity() instanceof ServerPlayer actor ? actor.getUUID() : null;
