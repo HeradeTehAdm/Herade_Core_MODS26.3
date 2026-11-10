@@ -195,7 +195,7 @@ public final class HeradeCore implements ModInitializer {
         });
 
         ServerPlayerEvents.AFTER_RESPAWN.register((oldPlayer, newPlayer, alive) ->
-                VANISH_MANAGER.refresh(newPlayer.getServer(), newPlayer));
+                VANISH_MANAGER.refresh(newPlayer.serverLevel().getServer(), newPlayer));
 
         ServerLifecycleEvents.SERVER_STOPPING.register(VANISH_MANAGER::clear);
         ServerTickEvents.END_SERVER_TICK.register(server -> {
