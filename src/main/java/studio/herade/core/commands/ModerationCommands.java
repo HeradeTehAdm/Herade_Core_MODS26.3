@@ -59,6 +59,7 @@ public final class ModerationCommands {
                         .executes(ModerationCommands::untimeout)));
         root.then(Commands.literal("unban")
                 .then(Commands.argument("uuid", StringArgumentType.word())
+                        .executes(ModerationCommands::unban)
                         .then(Commands.argument("username", StringArgumentType.word())
                                 .executes(ModerationCommands::unban))));
         root.then(Commands.literal("audit")
@@ -201,7 +202,6 @@ public final class ModerationCommands {
     private static int unban(CommandContext<CommandSourceStack> context) {
         CommandSourceStack source = context.getSource();
         String rawUuid = StringArgumentType.getString(context, "uuid");
-        String username = StringArgumentType.getString(context, "username");
         final UUID playerId;
         try {
             playerId = UUID.fromString(rawUuid);
@@ -210,12 +210,15 @@ public final class ModerationCommands {
             return 0;
         }
 
-        NameAndId identity = new NameAndId(playerId, username);
-        if (!source.getServer().getPlayerList().getBans().remove(identity)) {
+        UserBanListEntry existing = source.getServer().getPlayerList().getBans().getEntries().stream()
+                .filter(entry -> entry.getUser() != null && playerId.equals(entry.getUser().id()))
+                .findFirst().orElse(null);
+        if (existing == null || !source.getServer().getPlayerList().getBans().remove(existing.getUser())) {
             source.sendFailure(Component.literal("Активная блокировка для этого UUID не найдена."));
             return 0;
         }
 
+        String username = existing.getUser().name();
         UUID actorId = source.getEntity() instanceof ServerPlayer actor ? actor.getUUID() : null;
         long now = System.currentTimeMillis();
         HeradeCore.punishmentStore().revokeActiveRestrictions(playerId, actorId, "unban");
