@@ -2,6 +2,7 @@ package studio.herade.core;
 
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.loader.api.FabricLoader;
+import studio.herade.core.moderation.PunishmentStore;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -13,10 +14,14 @@ public final class HeradeCore implements ModInitializer {
 
     private static CoreConfig config;
     private static AuditLog auditLog;
+    private static PunishmentStore punishmentStore;
 
     @Override
     public void onInitialize() {
         config = ConfigManager.load();
+        Path dataDirectory = FabricLoader.getInstance().getConfigDir().resolve("herade-core");
+        punishmentStore = new PunishmentStore(dataDirectory.resolve("punishments.journal"));
+
         if (config.auditEnabled()) {
             Path auditPath = FabricLoader.getInstance().getConfigDir()
                     .resolve("herade-core")
@@ -38,5 +43,9 @@ public final class HeradeCore implements ModInitializer {
 
     public static AuditLog auditLog() {
         return auditLog;
+    }
+
+    public static PunishmentStore punishmentStore() {
+        return punishmentStore;
     }
 }
