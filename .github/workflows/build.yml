@@ -29,7 +29,7 @@ jobs:
           gradle-version: '9.8.0'
 
       - name: Build mod
-        run: gradle build --no-daemon
+        run: gradle selfTest build --no-daemon
 
       - name: Upload JAR
         uses: actions/upload-artifact@v4
