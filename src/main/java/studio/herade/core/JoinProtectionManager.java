@@ -37,7 +37,7 @@ public final class JoinProtectionManager {
         }
 
         if (recentJoins.size() >= alertThreshold
-                && lastAlertMillis == 0 || nowMillis - lastAlertMillis >= alertCooldownMillis) {
+                && (lastAlertMillis == 0 || nowMillis - lastAlertMillis >= alertCooldownMillis)) {
             lastAlertMillis = nowMillis;
             return recentJoins.size();
         }
