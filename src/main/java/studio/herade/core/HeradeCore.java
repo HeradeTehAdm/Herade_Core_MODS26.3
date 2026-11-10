@@ -9,6 +9,7 @@ import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import net.fabricmc.fabric.api.event.player.AttackEntityCallback;
 import net.fabricmc.fabric.api.event.player.UseEntityCallback;
+import net.fabricmc.fabric.api.entity.event.v1.ServerLivingEntityEvents;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.server.level.ServerPlayer;
 import studio.herade.core.commands.ModerationCommands;
@@ -84,6 +85,8 @@ public final class HeradeCore implements ModInitializer {
             }
             return InteractionResult.PASS;
         });
+        ServerLivingEntityEvents.ALLOW_DAMAGE.register((entity, source, amount) ->
+                !(entity instanceof ServerPlayer target && VANISH_MANAGER.isVanished(target.getUUID())));
 
         ServerLoginConnectionEvents.QUERY_START.register((listener, server, sender, synchronizer) -> {
             if (!config.authenticationEnabled()) {
