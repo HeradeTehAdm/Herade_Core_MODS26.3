@@ -46,6 +46,10 @@ processResources {
     }
 }
 
+tasks.test {
+    failOnNoDiscoveredTests = false
+}
+
 tasks.register('selfTest', JavaExec) {
     group = 'verification'
     description = 'Runs Herade Core persistence and model self-tests.'
