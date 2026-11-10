@@ -28,8 +28,10 @@ jobs:
         with:
           gradle-version: '9.8.0'
 
-      - name: Build mod
-        run: gradle selfTest build --no-daemon
+      - name: Inspect Loom remap tasks
+        run: gradle tasks --all --no-daemon | grep -i remap || true
+      - name: Build mod and remap runtime JAR
+        run: gradle selfTest remapJar build --no-daemon
 
       - name: Upload JAR
         uses: actions/upload-artifact@v4
