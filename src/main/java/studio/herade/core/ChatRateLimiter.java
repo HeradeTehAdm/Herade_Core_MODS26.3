@@ -11,7 +11,7 @@ public final class ChatRateLimiter {
 
     private static final int MAX_MESSAGES = 5;
     private static final long WINDOW_MILLIS = 5_000;
-    private static final long NOTICE_COOLDOWN_MILLIS = 2_000;
+    private static final long NOTICE_COOLDOWN_MILLIS = 10_000;
 
     private static final class Window {
         private final ArrayDeque<Long> timestamps = new ArrayDeque<>();
@@ -36,7 +36,7 @@ public final class ChatRateLimiter {
             }
 
             if (window.timestamps.size() >= MAX_MESSAGES) {
-                boolean notify = nowMillis - window.lastNoticeMillis >= NOTICE_COOLDOWN_MILLIS;
+                boolean notify = window.lastNoticeMillis == 0 || nowMillis - window.lastNoticeMillis >= NOTICE_COOLDOWN_MILLIS;
                 if (notify) {
                     window.lastNoticeMillis = nowMillis;
                 }
