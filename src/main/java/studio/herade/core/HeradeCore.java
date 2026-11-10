@@ -3,6 +3,7 @@ package studio.herade.core;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.loader.api.FabricLoader;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
+import net.fabricmc.fabric.api.message.v1.ServerMessageEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import studio.herade.core.commands.ModerationCommands;
@@ -30,12 +31,14 @@ public final class HeradeCore implements ModInitializer {
     private static SecurityApiClient securityApiClient;
     private static final PlayerSessionTracker SESSION_TRACKER = new PlayerSessionTracker();
     private static final VanishManager VANISH_MANAGER = new VanishManager();
+    private static TimeoutManager timeoutManager;
 
     @Override
     public void onInitialize() {
         config = ConfigManager.load();
         Path dataDirectory = FabricLoader.getInstance().getConfigDir().resolve("herade-core");
         punishmentStore = new PunishmentStore(dataDirectory.resolve("punishments.journal"));
+        timeoutManager = new TimeoutManager(punishmentStore);
 
         if (config.authenticationEnabled()) {
             try {
@@ -103,6 +106,16 @@ public final class HeradeCore implements ModInitializer {
             synchronizer.waitFor(verification);
         });
 
+        ServerMessageEvents.ALLOW_CHAT_MESSAGE.register((message, sender, boundChatType) -> {
+            if (timeoutManager != null && timeoutManager.isTimedOut(sender.getUUID())) {
+                if (timeoutManager.shouldNotify(sender.getUUID())) {
+                    sender.sendSystemMessage(Component.literal("На тебе действует временный запрет на отправку сообщений в чат."));
+                }
+                return false;
+            }
+            return true;
+        });
+
         ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> {
             VANISH_MANAGER.hideFromNewPlayer(handler.player);
             SESSION_TRACKER.joined(handler.player.getUUID(), handler.player.getName().getString());
@@ -152,5 +165,9 @@ public final class HeradeCore implements ModInitializer {
 
     public static VanishManager vanish() {
         return VANISH_MANAGER;
+    }
+
+    public static TimeoutManager timeouts() {
+        return timeoutManager;
     }
 }
