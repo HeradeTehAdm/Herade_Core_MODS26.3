@@ -22,7 +22,7 @@
 
     gradle selfTest build --no-daemon
 
-JAR создаётся в build/libs/. CI выполняет self-tests перед сборкой и публикует JAR как артефакт GitHub Actions.
+JAR создаётся в build/libs/. Для Minecraft 26.3 Loom использует non-obfuscated runtime: отдельная задача remapJar и Mojang mappings не применяются. CI выполняет self-tests, проверяет метаданные и entrypoint внутри JAR, затем публикует только runtime JAR как артефакт GitHub Actions.
 
 ## Уже реализовано
 
