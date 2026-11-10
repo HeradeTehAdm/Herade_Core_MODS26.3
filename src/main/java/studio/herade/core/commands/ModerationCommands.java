@@ -1,7 +1,7 @@
 package studio.herade.core.commands;
 
 import com.mojang.brigadier.CommandDispatcher;
-import com.mojang.brigadier.arguments.StringArgumentType;
+import com.mojang.brigadier.arguments.IntegerArgumentType;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.commands.arguments.EntityArgument;
@@ -27,6 +27,11 @@ public final class ModerationCommands {
                         .executes(context -> status(context.getSource())))
                 .then(Commands.literal("vanish")
                         .executes(context -> toggleVanish(context.getSource())))
+                .then(Commands.literal("audit")
+                        .executes(context -> audit(context.getSource(), 10))
+                        .then(Commands.argument("limit", IntegerArgumentType.integer(1, 20))
+                                .executes(context -> audit(context.getSource(),
+                                        IntegerArgumentType.getInteger(context, "limit"))))
                 .then(Commands.literal("inspect")
                         .then(Commands.argument("target", EntityArgument.player())
                                 .executes(context -> inspect(context.getSource(),
@@ -56,6 +61,32 @@ public final class ModerationCommands {
         source.sendSuccess(() -> Component.literal(
                 vanished ? "Vanish включён." : "Vanish выключен."), false);
         return 1;
+    }
+
+    private static int audit(CommandSourceStack source, int limit) {
+        if (HeradeCore.auditLog() == null) {
+            source.sendFailure(Component.literal("Аудит отключён в конфигурации Herade Core."));
+            return 0;
+        }
+
+        var events = HeradeCore.auditLog().recent(limit);
+        if (events.isEmpty()) {
+            source.sendSuccess(() -> Component.literal("Записей аудита пока нет."), false);
+            return 1;
+        }
+
+        source.sendSuccess(() -> Component.literal("Последние события аудита: " + events.size()), false);
+        events.forEach(event -> {
+            String actor = event.actor().isBlank() ? "server" : event.actor();
+            String target = event.target().isBlank() ? "-" : event.target();
+            String line = Instant.ofEpochMilli(event.timestampMillis())
+                    + " | " + event.action()
+                    + " | actor=" + actor
+                    + " | target=" + target
+                    + (event.reason().isBlank() ? "" : " | " + event.reason());
+            source.sendSuccess(() -> Component.literal(line), false);
+        });
+        return events.size();
     }
 
     private static int inspect(CommandSourceStack source, ServerPlayer target) {
