@@ -87,10 +87,10 @@ public final class PunishmentStore {
             if (punishment.targetId().equals(targetId)
                     && (punishment.type() == PunishmentType.BAN || punishment.type() == PunishmentType.TEMP_BAN)
                     && punishment.isPersistentRestriction(now)) {
-                boolean saved = append("REVOKE\\t" + punishment.id()
-                        + "\\t" + (actorId == null ? "" : actorId)
-                        + "\\t" + now
-                        + "\\t" + encode(reason == null ? "" : reason));
+                boolean saved = append("REVOKE\t" + punishment.id()
+                        + "\t" + (actorId == null ? "" : actorId)
+                        + "\t" + now
+                        + "\t" + encode(reason == null ? "" : reason));
                 if (saved) {
                     revoked++;
                 }
@@ -120,7 +120,7 @@ public final class PunishmentStore {
         }
         try {
             for (String line : Files.readAllLines(file, StandardCharsets.UTF_8)) {
-                String[] fields = line.split("\\t", -1);
+                String[] fields = line.split("\t", -1);
                 if (fields.length == 8 && "ISSUE".equals(fields[0])) {
                     try {
                         UUID id = UUID.fromString(fields[1]);
