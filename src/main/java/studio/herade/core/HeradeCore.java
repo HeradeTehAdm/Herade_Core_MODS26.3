@@ -3,6 +3,8 @@ package studio.herade.core;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.loader.api.FabricLoader;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
+import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
+import studio.herade.core.commands.ModerationCommands;
 import net.fabricmc.fabric.api.networking.v1.ServerLoginConnectionEvents;
 import net.minecraft.network.chat.Component;
 import studio.herade.core.mixin.ServerLoginPacketListenerAccessor;
@@ -46,6 +48,9 @@ public final class HeradeCore implements ModInitializer {
                     .resolve("audit.log");
             auditLog = new AuditLog(auditPath, config.auditRetentionDays());
         }
+
+        CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) ->
+                ModerationCommands.register(dispatcher));
 
         ServerLoginConnectionEvents.QUERY_START.register((listener, server, sender, synchronizer) -> {
             if (!config.authenticationEnabled()) {
