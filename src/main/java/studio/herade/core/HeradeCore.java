@@ -3,6 +3,7 @@ package studio.herade.core;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.loader.api.FabricLoader;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
+import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import studio.herade.core.commands.ModerationCommands;
 import net.fabricmc.fabric.api.networking.v1.ServerLoginConnectionEvents;
@@ -111,12 +112,15 @@ public final class HeradeCore implements ModInitializer {
             }
         });
         ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> {
+            VANISH_MANAGER.playerDisconnected(handler.player.getUUID());
             SESSION_TRACKER.left(handler.player.getUUID(), handler.player.getName().getString());
             if (auditLog != null) {
                 auditLog.append(null, "PLAYER_LEAVE", handler.player.getUUID(),
                         handler.player.getName().getString());
             }
         });
+
+        ServerLifecycleEvents.SERVER_STOPPING.register(VANISH_MANAGER::clear);
 
         LOGGER.info("Herade Core {} initialized.", BuildInfo.VERSION);
         LOGGER.info("Configuration loaded: authentication={}, audit={}",
