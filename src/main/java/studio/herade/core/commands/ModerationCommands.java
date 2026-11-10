@@ -56,7 +56,7 @@ public final class ModerationCommands {
                         .executes(context -> audit(context.getSource(), 10))
                         .then(Commands.argument("limit", IntegerArgumentType.integer(1, 20))
                                 .executes(context -> audit(context.getSource(),
-                                        IntegerArgumentType.getInteger(context, "limit")))))
+                                        IntegerArgumentType.getInteger(context, "limit"))))))
                 .then(Commands.literal("inspect")
                         .then(Commands.argument("target", EntityArgument.player())
                                 .executes(context -> inspect(context.getSource(),
