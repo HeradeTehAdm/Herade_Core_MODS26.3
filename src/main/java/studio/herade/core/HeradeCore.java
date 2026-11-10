@@ -123,7 +123,7 @@ public final class HeradeCore implements ModInitializer {
                 if (decision.notifyPlayer()) {
                     sender.sendSystemMessage(Component.literal("Слишком много сообщений. Сделай небольшую паузу."));
                 }
-                if (auditLog != null) {
+                if (decision.notifyPlayer() && auditLog != null) {
                     auditLog.append(null, "CHAT_RATE_LIMITED", sender.getUUID(), "rate threshold exceeded");
                 }
                 return false;
