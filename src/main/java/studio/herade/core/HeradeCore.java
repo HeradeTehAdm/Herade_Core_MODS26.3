@@ -53,6 +53,12 @@ public final class HeradeCore implements ModInitializer {
             }
 
             CompletableFuture<Void> verification = CompletableFuture.runAsync(() -> {
+                if (!server.usesAuthentication()) {
+                    listener.disconnect(Component.literal(
+                            "Herade Core требует online-mode=true для безопасной проверки UUID."));
+                    return;
+                }
+
                 var profile = ((ServerLoginPacketListenerAccessor) listener).herade$getAuthenticatedProfile();
                 if (profile == null || profile.id() == null || profile.name() == null) {
                     listener.disconnect(Component.literal(
