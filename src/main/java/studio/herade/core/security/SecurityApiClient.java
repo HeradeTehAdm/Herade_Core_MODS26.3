@@ -70,7 +70,7 @@ public final class SecurityApiClient {
             signature = sign(canonical, secret);
         } catch (GeneralSecurityException exception) {
             HeradeCore.LOGGER.error("Could not sign Security API request.", exception);
-            return CompletableFuture.completedFuture(VerificationResult.UNAVAILABLE);
+            return CompletableFuture.completedFuture(new VerificationResult(VerificationStatus.UNAVAILABLE, null));
         }
 
         HttpRequest request = HttpRequest.newBuilder(endpoint)
