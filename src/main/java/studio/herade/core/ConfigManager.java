@@ -53,7 +53,11 @@ public final class ConfigManager {
         boolean auditEnabled = readBoolean(properties, "audit.enabled", defaults.auditEnabled());
         int retentionDays = readBoundedInt(properties, "audit.retention-days",
                 defaults.auditRetentionDays(), 1, 365);
-        boolean logPlayerIps = readBoolean(properties, "privacy.log-player-ips", defaults.logPlayerIps());
+        boolean requestedIpLogging = readBoolean(properties, "privacy.log-player-ips", defaults.logPlayerIps());
+        if (requestedIpLogging) {
+            HeradeCore.LOGGER.warn("IP logging is intentionally unsupported and remains disabled.");
+        }
+        boolean logPlayerIps = false;
         int chatMaxMessages = readBoundedInt(properties, "protection.chat-max-messages",
                 defaults.chatMaxMessages(), 1, 30);
         int chatWindowSeconds = readBoundedInt(properties, "protection.chat-window-seconds",
