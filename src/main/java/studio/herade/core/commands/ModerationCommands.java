@@ -39,18 +39,23 @@ public final class ModerationCommands {
         source.sendSuccess(() -> Component.literal(
                 "Herade Core " + BuildInfo.VERSION
                         + " | auth=" + HeradeCore.config().authenticationEnabled()
-                        + " | audit=" + HeradeCore.config().auditEnabled()), false);
+                        + " | audit=" + HeradeCore.config().auditEnabled()
+                        + " | online=" + HeradeCore.sessions().onlineCount()), false);
         return 1;
     }
 
     private static int inspect(CommandSourceStack source, ServerPlayer target) {
         String coordinates = String.format(Locale.ROOT, "%.1f, %.1f, %.1f",
                 target.getX(), target.getY(), target.getZ());
+        String sessionStarted = HeradeCore.sessions().find(target.getUUID())
+                .map(session -> Instant.ofEpochMilli(session.joinedAtMillis()).toString())
+                .orElse("нет данных");
         source.sendSuccess(() -> Component.literal(
                 "Игрок: " + target.getName().getString()
                         + " | UUID: " + target.getUUID()
                         + " | Мир: " + target.level().dimension()
-                        + " | Координаты: " + coordinates), false);
+                        + " | Координаты: " + coordinates
+                        + " | Вход: " + sessionStarted), false);
         return 1;
     }
 
