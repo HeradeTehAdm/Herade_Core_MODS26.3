@@ -13,6 +13,7 @@ import net.fabricmc.fabric.api.event.player.AttackBlockCallback;
 import net.fabricmc.fabric.api.event.player.UseBlockCallback;
 import net.fabricmc.fabric.api.event.player.UseItemCallback;
 import net.fabricmc.fabric.api.entity.event.v1.ServerLivingEntityEvents;
+import net.fabricmc.fabric.api.entity.event.v1.ServerPlayerEvents;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.server.level.ServerPlayer;
 import studio.herade.core.commands.ModerationCommands;
@@ -192,6 +193,9 @@ public final class HeradeCore implements ModInitializer {
                         handler.player.getName().getString());
             }
         });
+
+        ServerPlayerEvents.AFTER_RESPAWN.register((oldPlayer, newPlayer, alive) ->
+                VANISH_MANAGER.refresh(newPlayer.getServer(), newPlayer));
 
         ServerLifecycleEvents.SERVER_STOPPING.register(VANISH_MANAGER::clear);
         ServerTickEvents.END_SERVER_TICK.register(server -> {
