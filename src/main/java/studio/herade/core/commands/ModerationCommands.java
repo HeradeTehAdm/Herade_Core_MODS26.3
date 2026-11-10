@@ -1,18 +1,25 @@
 package studio.herade.core.commands;
 
 import com.mojang.brigadier.CommandDispatcher;
+import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
+import com.mojang.brigadier.arguments.StringArgumentType;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.commands.arguments.EntityArgument;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.permissions.Permissions;
+import net.minecraft.server.players.NameAndId;
+import net.minecraft.server.players.UserBanListEntry;
 import studio.herade.core.BuildInfo;
 import studio.herade.core.HeradeCore;
 import studio.herade.core.moderation.Punishment;
+import studio.herade.core.moderation.PunishmentType;
 
 import java.time.Instant;
+import java.util.Date;
+import java.util.UUID;
 import java.util.List;
 import java.util.Locale;
 
@@ -27,6 +34,24 @@ public final class ModerationCommands {
                         .executes(context -> status(context.getSource())))
                 .then(Commands.literal("vanish")
                         .executes(context -> toggleVanish(context.getSource())))
+                .then(Commands.literal("kick")
+                        .then(Commands.argument("target", EntityArgument.player())
+                                .then(Commands.argument("reason", StringArgumentType.greedyString())
+                                        .executes(context -> kick(context)))))
+                .then(Commands.literal("ban")
+                        .then(Commands.argument("target", EntityArgument.player())
+                                .then(Commands.argument("reason", StringArgumentType.greedyString())
+                                        .executes(context -> ban(context, 0)))))
+                .then(Commands.literal("tempban")
+                        .then(Commands.argument("target", EntityArgument.player())
+                                .then(Commands.argument("minutes", IntegerArgumentType.integer(1, 525600))
+                                        .then(Commands.argument("reason", StringArgumentType.greedyString())
+                                                .executes(context -> ban(context,
+                                                        IntegerArgumentType.getInteger(context, "minutes")))))))
+                .then(Commands.literal("unban")
+                        .then(Commands.argument("uuid", StringArgumentType.word())
+                                .then(Commands.argument("username", StringArgumentType.word())
+                                        .executes(context -> unban(context)))))
                 .then(Commands.literal("audit")
                         .executes(context -> audit(context.getSource(), 10))
                         .then(Commands.argument("limit", IntegerArgumentType.integer(1, 20))
@@ -61,6 +86,87 @@ public final class ModerationCommands {
         source.sendSuccess(() -> Component.literal(
                 vanished ? "Vanish включён." : "Vanish выключен."), false);
         return 1;
+    }
+
+    private static int kick(CommandContext<CommandSourceStack> context) {
+        CommandSourceStack source = context.getSource();
+        ServerPlayer target = EntityArgument.getPlayer(context, "target");
+        String reason = StringArgumentType.getString(context, "reason");
+        long now = System.currentTimeMillis();
+        UUID actorId = source.getEntity() instanceof ServerPlayer actor ? actor.getUUID() : null;
+
+        target.connection.disconnect(Component.literal("Кик с сервера. Причина: " + reason));
+        HeradeCore.punishmentStore().issue(new Punishment(
+                UUID.randomUUID(), target.getUUID(), actorId, PunishmentType.KICK, reason, now, 0));
+        recordModerationAction(actorId, target.getUUID(), "KICK", reason);
+        source.sendSuccess(() -> Component.literal(
+                "Игрок " + target.getName().getString() + " отключён. Причина: " + reason), true);
+        return 1;
+    }
+
+    private static int ban(CommandContext<CommandSourceStack> context, int minutes) {
+        CommandSourceStack source = context.getSource();
+        ServerPlayer target = EntityArgument.getPlayer(context, "target");
+        String reason = StringArgumentType.getString(context, "reason");
+        long now = System.currentTimeMillis();
+        long expiresAt = minutes > 0 ? Math.addExact(now, Math.multiplyExact(minutes, 60_000L)) : 0L;
+        Date expiry = expiresAt == 0 ? null : new Date(expiresAt);
+        UUID actorId = source.getEntity() instanceof ServerPlayer actor ? actor.getUUID() : null;
+        NameAndId identity = new NameAndId(target.getUUID(), target.getName().getString());
+        UserBanListEntry entry = new UserBanListEntry(identity, new Date(now), "Herade Core", expiry, reason);
+
+        if (!source.getServer().getPlayerList().getBans().add(entry)) {
+            source.sendFailure(Component.literal("Не удалось сохранить блокировку в списке Minecraft."));
+            return 0;
+        }
+
+        PunishmentType type = minutes > 0 ? PunishmentType.TEMP_BAN : PunishmentType.BAN;
+        HeradeCore.punishmentStore().issue(new Punishment(
+                UUID.randomUUID(), target.getUUID(), actorId, type, reason, now, expiresAt));
+        recordModerationAction(actorId, target.getUUID(), type.name(), reason);
+        target.connection.disconnect(Component.literal(
+                (minutes > 0 ? "Временная блокировка" : "Постоянная блокировка")
+                        + ". Причина: " + reason));
+        source.sendSuccess(() -> Component.literal(
+                "Игрок " + target.getName().getString()
+                        + (minutes > 0 ? " заблокирован на " + minutes + " мин." : " заблокирован.")
+                        + " Причина: " + reason), true);
+        return 1;
+    }
+
+    private static int unban(CommandContext<CommandSourceStack> context) {
+        CommandSourceStack source = context.getSource();
+        String rawUuid = StringArgumentType.getString(context, "uuid");
+        String username = StringArgumentType.getString(context, "username");
+        final UUID playerId;
+        try {
+            playerId = UUID.fromString(rawUuid);
+        } catch (IllegalArgumentException exception) {
+            source.sendFailure(Component.literal("Некорректный UUID. Используй UUID игрока из журнала или заявки."));
+            return 0;
+        }
+
+        NameAndId identity = new NameAndId(playerId, username);
+        if (!source.getServer().getPlayerList().getBans().remove(identity)) {
+            source.sendFailure(Component.literal("Активная блокировка для этого UUID не найдена."));
+            return 0;
+        }
+
+        UUID actorId = source.getEntity() instanceof ServerPlayer actor ? actor.getUUID() : null;
+        long now = System.currentTimeMillis();
+        HeradeCore.punishmentStore().revokeActiveRestrictions(playerId, actorId, "unban");
+        HeradeCore.punishmentStore().issue(new Punishment(
+                UUID.randomUUID(), playerId, actorId, PunishmentType.PARDON,
+                "unban", now, 0));
+        recordModerationAction(actorId, playerId, "UNBAN", "unban");
+        source.sendSuccess(() -> Component.literal("Блокировка снята: " + username + " (" + playerId + ")."), true);
+        return 1;
+    }
+
+    private static void recordModerationAction(UUID actorId, UUID targetId, String action, String reason) {
+        if (HeradeCore.auditLog() != null) {
+            HeradeCore.auditLog().append(actorId, action, targetId, reason);
+        }
     }
 
     private static int audit(CommandSourceStack source, int limit) {
