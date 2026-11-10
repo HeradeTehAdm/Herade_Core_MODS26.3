@@ -77,18 +77,20 @@ public final class PunishmentStore {
         return revoked;
     }
 
-    public synchronized int revokeActiveRestrictions(UUID targetId, UUID actorId, String reason) {
+    public synchronized int revokeActiveBans(UUID targetId, UUID actorId, String reason) {
         if (targetId == null) {
             return 0;
         }
         int revoked = 0;
         long now = System.currentTimeMillis();
         for (Punishment punishment : findAll().values()) {
-            if (punishment.targetId().equals(targetId) && punishment.isPersistentRestriction(now)) {
-                boolean saved = append("REVOKE\t" + punishment.id()
-                        + "\t" + (actorId == null ? "" : actorId)
-                        + "\t" + now
-                        + "\t" + encode(reason == null ? "" : reason));
+            if (punishment.targetId().equals(targetId)
+                    && (punishment.type() == PunishmentType.BAN || punishment.type() == PunishmentType.TEMP_BAN)
+                    && punishment.isPersistentRestriction(now)) {
+                boolean saved = append("REVOKE\\t" + punishment.id()
+                        + "\\t" + (actorId == null ? "" : actorId)
+                        + "\\t" + now
+                        + "\\t" + encode(reason == null ? "" : reason));
                 if (saved) {
                     revoked++;
                 }
