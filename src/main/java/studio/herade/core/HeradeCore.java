@@ -16,6 +16,7 @@ import net.fabricmc.fabric.api.entity.event.v1.ServerLivingEntityEvents;
 import net.fabricmc.fabric.api.entity.event.v1.ServerPlayerEvents;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.server.level.ServerLevel;
 import studio.herade.core.commands.ModerationCommands;
 import net.fabricmc.fabric.api.networking.v1.ServerLoginConnectionEvents;
 import net.minecraft.network.chat.Component;
@@ -195,7 +196,7 @@ public final class HeradeCore implements ModInitializer {
         });
 
         ServerPlayerEvents.AFTER_RESPAWN.register((oldPlayer, newPlayer, alive) ->
-                VANISH_MANAGER.refresh(newPlayer.serverLevel().getServer(), newPlayer));
+                VANISH_MANAGER.refresh(((ServerLevel) newPlayer.level()).getServer(), newPlayer));
 
         ServerLifecycleEvents.SERVER_STOPPING.register(VANISH_MANAGER::clear);
         ServerTickEvents.END_SERVER_TICK.register(server -> {
