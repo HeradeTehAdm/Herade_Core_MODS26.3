@@ -279,18 +279,39 @@ public final class ModerationCommands {
                 target.getX(), target.getY(), target.getZ());
         String health = String.format(Locale.ROOT, "%.1f/%.1f",
                 target.getHealth(), target.getMaxHealth());
+        String gameMode = target.gameMode.getGameModeForPlayer().getName();
+        String effects = target.getActiveEffects().stream()
+                .limit(8)
+                .map(effect -> effect.getEffect().value().getDisplayName().getString()
+                        + " " + (effect.getAmplifier() + 1)
+                        + " (" + (effect.isInfiniteDuration() ? "∞" : (effect.getDuration() / 20) + "s") + ")")
+                .collect(java.util.stream.Collectors.joining(", "));
+        if (effects.isBlank()) effects = "нет";
         boolean vanished = HeradeCore.vanish().isVanished(target.getUUID());
         String sessionStarted = HeradeCore.sessions().find(target.getUUID())
                 .map(session -> Instant.ofEpochMilli(session.joinedAtMillis()).toString())
                 .orElse("нет данных");
+        String finalEffects = effects;
         source.sendSuccess(() -> Component.literal(
                 "Игрок: " + target.getName().getString()
                         + " | UUID: " + target.getUUID()
                         + " | Мир: " + target.level().dimension()
                         + " | Координаты: " + coordinates
+                        + " | Режим: " + gameMode
                         + " | Здоровье: " + health
+                        + " | Эффекты: " + finalEffects
                         + " | Vanish: " + vanished
                         + " | Вход: " + sessionStarted), false);
+        if (HeradeCore.auditLog() != null) {
+            List<studio.herade.core.AuditLog.AuditEvent> history = HeradeCore.auditLog().recent(100).stream()
+                    .filter(event -> target.getUUID().toString().equals(event.target()))
+                    .limit(5)
+                    .toList();
+            source.sendSuccess(() -> Component.literal("Последние события игрока: " + history.size()), false);
+            history.forEach(event -> source.sendSuccess(() -> Component.literal(
+                    Instant.ofEpochMilli(event.timestampMillis()) + " | " + event.action()
+                            + (event.reason().isBlank() ? "" : " | " + event.reason())), false));
+        }
         return 1;
     }
 
