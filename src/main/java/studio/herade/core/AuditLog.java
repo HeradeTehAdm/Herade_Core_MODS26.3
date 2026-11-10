@@ -14,6 +14,9 @@ import java.util.List;
 import java.util.UUID;
 
 public final class AuditLog {
+    public record AuditEvent(long timestampMillis, String actor, String action, String target, String reason) {
+    }
+
     private static final Base64.Encoder ENCODER = Base64.getUrlEncoder().withoutPadding();
     private static final Base64.Decoder DECODER = Base64.getUrlDecoder();
 
@@ -52,6 +55,37 @@ public final class AuditLog {
         } catch (IOException exception) {
             HeradeCore.LOGGER.error("Failed to append an audit event.", exception);
         }
+    }
+
+    public synchronized List<AuditEvent> recent(int limit) {
+        int boundedLimit = Math.max(1, Math.min(100, limit));
+        if (Files.notExists(file)) {
+            return List.of();
+        }
+
+        List<AuditEvent> events = new ArrayList<>();
+        try {
+            List<String> lines = Files.readAllLines(file, StandardCharsets.UTF_8);
+            for (int index = lines.size() - 1; index >= 0 && events.size() < boundedLimit; index--) {
+                String[] fields = lines.get(index).split("\\t", -1);
+                if (fields.length != 5) {
+                    continue;
+                }
+                try {
+                    events.add(new AuditEvent(
+                            Long.parseLong(fields[0]),
+                            decodeField(fields[1]),
+                            decodeField(fields[2]),
+                            decodeField(fields[3]),
+                            decodeField(fields[4])));
+                } catch (RuntimeException exception) {
+                    HeradeCore.LOGGER.warn("Skipping malformed audit entry while reading recent events.");
+                }
+            }
+        } catch (IOException exception) {
+            HeradeCore.LOGGER.error("Could not read recent audit events.", exception);
+        }
+        return List.copyOf(events);
     }
 
     public synchronized void pruneExpired() {
