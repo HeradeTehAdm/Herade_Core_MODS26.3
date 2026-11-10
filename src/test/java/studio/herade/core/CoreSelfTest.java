@@ -3,6 +3,7 @@ package studio.herade.core;
 import studio.herade.core.moderation.Punishment;
 import studio.herade.core.moderation.PunishmentStore;
 import studio.herade.core.moderation.PunishmentType;
+import studio.herade.core.security.SecurityApiSelfTest;
 import studio.herade.core.TimeoutManager;
 
 import java.nio.file.Files;
@@ -14,6 +15,7 @@ public final class CoreSelfTest {
     }
 
     public static void main(String[] args) throws Exception {
+        SecurityApiSelfTest.run();
         testPunishmentModel();
         testPunishmentPersistence();
         testTimeoutPersistence();
