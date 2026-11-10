@@ -204,10 +204,17 @@ public final class ModerationCommands {
         CommandSourceStack source = context.getSource();
         ServerPlayer target = EntityArgument.getPlayer(context, "target");
         UUID actorId = source.getEntity() instanceof ServerPlayer actor ? actor.getUUID() : null;
+        long activeTimeouts = HeradeCore.punishmentStore().activeFor(target.getUUID()).stream()
+                .filter(punishment -> punishment.type() == PunishmentType.TIMEOUT).count();
         int revoked = HeradeCore.punishmentStore().revokeActiveTimeouts(
                 target.getUUID(), actorId, "untimeout");
+        if (revoked != activeTimeouts) {
+            source.sendFailure(Component.literal(
+                    "Не удалось полностью записать снятие timeout в журнал. Ограничение оставлено активным."));
+            return 0;
+        }
         boolean cleared = HeradeCore.timeouts().clear(target.getUUID());
-        if (revoked == 0 && !cleared) {
+        if (activeTimeouts == 0 && !cleared) {
             source.sendFailure(Component.literal("Активный timeout для игрока не найден."));
             return 0;
         }
@@ -240,7 +247,15 @@ public final class ModerationCommands {
         String username = existing.getUser().name();
         UUID actorId = source.getEntity() instanceof ServerPlayer actor ? actor.getUUID() : null;
         long now = System.currentTimeMillis();
-        HeradeCore.punishmentStore().revokeActiveRestrictions(playerId, actorId, "unban");
+        long activeBans = HeradeCore.punishmentStore().activeFor(playerId).stream()
+                .filter(punishment -> punishment.type() == PunishmentType.BAN
+                        || punishment.type() == PunishmentType.TEMP_BAN).count();
+        int revokedBans = HeradeCore.punishmentStore().revokeActiveBans(playerId, actorId, "unban");
+        if (revokedBans != activeBans) {
+            source.sendFailure(Component.literal(
+                    "Не удалось полностью записать снятие блокировки в журнал. Повтори команду."));
+            return 0;
+        }
         HeradeCore.punishmentStore().issue(new Punishment(
                 UUID.randomUUID(), playerId, actorId, PunishmentType.PARDON,
                 "unban", now, 0));
