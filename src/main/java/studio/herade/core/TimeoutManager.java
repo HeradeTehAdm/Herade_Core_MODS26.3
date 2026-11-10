@@ -62,8 +62,18 @@ public final class TimeoutManager {
     }
 
     public boolean shouldNotify(UUID playerId) {
+        if (playerId == null || !isTimedOut(playerId)) {
+            return false;
+        }
         long now = System.currentTimeMillis();
-        Long previous = lastNotice.put(playerId, now);
-        return previous == null || now - previous >= 2000;
+        java.util.concurrent.atomic.AtomicBoolean allowed = new java.util.concurrent.atomic.AtomicBoolean(false);
+        lastNotice.compute(playerId, (id, previous) -> {
+            if (previous == null || now - previous >= 2000) {
+                allowed.set(true);
+                return now;
+            }
+            return previous;
+        });
+        return allowed.get();
     }
 }
