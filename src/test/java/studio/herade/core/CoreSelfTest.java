@@ -3,6 +3,7 @@ package studio.herade.core;
 import studio.herade.core.moderation.Punishment;
 import studio.herade.core.moderation.PunishmentStore;
 import studio.herade.core.moderation.PunishmentType;
+import studio.herade.core.TimeoutManager;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -15,6 +16,7 @@ public final class CoreSelfTest {
     public static void main(String[] args) throws Exception {
         testPunishmentModel();
         testPunishmentPersistence();
+        testTimeoutPersistence();
         testAuditPersistence();
         System.out.println("[Herade Core] All self-tests passed.");
     }
@@ -36,6 +38,9 @@ public final class CoreSelfTest {
         Punishment kick = new Punishment(UUID.randomUUID(), target, null, PunishmentType.KICK,
                 "test", created, 0);
         check(!kick.isPersistentRestriction(created), "kick must not be a persistent restriction");
+        Punishment pardon = new Punishment(UUID.randomUUID(), target, null, PunishmentType.PARDON,
+                "test pardon", created, 0);
+        check(!pardon.isPersistentRestriction(created), "pardon must not be an active restriction");
 
         expectIllegalArgument(() -> new Punishment(UUID.randomUUID(), target, null, PunishmentType.TIMEOUT,
                 "invalid", created, 0), "temporary timeout must require an expiry");
@@ -65,6 +70,30 @@ public final class CoreSelfTest {
             deleteTree(directory);
         }
         System.out.println("[Herade Core] Punishment persistence: OK");
+    }
+
+    private static void testTimeoutPersistence() throws Exception {
+        Path directory = Files.createTempDirectory("herade-timeout-test");
+        try {
+            PunishmentStore store = new PunishmentStore(directory.resolve("punishments.journal"));
+            UUID target = UUID.randomUUID();
+            long now = System.currentTimeMillis();
+            Punishment timeout = new Punishment(UUID.randomUUID(), target, null, PunishmentType.TIMEOUT,
+                    "test timeout", now, now + 60_000);
+            check(store.issue(timeout), "timeout should be persisted");
+
+            TimeoutManager manager = new TimeoutManager(store);
+            check(manager.isTimedOut(target), "restored timeout should be active");
+            check(manager.shouldNotify(target), "first timeout notice should be allowed");
+            check(!manager.shouldNotify(target), "timeout notice should be throttled");
+            check(store.revokeActiveTimeouts(target, null, "test untimeout") == 1,
+                    "active timeout should be revocable");
+            TimeoutManager reopened = new TimeoutManager(store);
+            check(!reopened.isTimedOut(target), "revoked timeout should not be restored");
+        } finally {
+            deleteTree(directory);
+        }
+        System.out.println("[Herade Core] Timeout persistence: OK");
     }
 
     private static void testAuditPersistence() throws Exception {
