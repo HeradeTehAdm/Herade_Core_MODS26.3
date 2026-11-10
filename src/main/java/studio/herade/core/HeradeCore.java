@@ -27,6 +27,7 @@ public final class HeradeCore implements ModInitializer {
     private static AuditLog auditLog;
     private static PunishmentStore punishmentStore;
     private static SecurityApiClient securityApiClient;
+    private static final PlayerSessionTracker SESSION_TRACKER = new PlayerSessionTracker();
 
     @Override
     public void onInitialize() {
@@ -101,12 +102,14 @@ public final class HeradeCore implements ModInitializer {
         });
 
         ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> {
+            SESSION_TRACKER.joined(handler.player.getUUID(), handler.player.getName().getString());
             if (auditLog != null) {
                 auditLog.append(null, "PLAYER_JOIN", handler.player.getUUID(),
                         handler.player.getName().getString());
             }
         });
         ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> {
+            SESSION_TRACKER.left(handler.player.getUUID(), handler.player.getName().getString());
             if (auditLog != null) {
                 auditLog.append(null, "PLAYER_LEAVE", handler.player.getUUID(),
                         handler.player.getName().getString());
@@ -135,5 +138,9 @@ public final class HeradeCore implements ModInitializer {
 
     public static SecurityApiClient securityApiClient() {
         return securityApiClient;
+    }
+
+    public static PlayerSessionTracker sessions() {
+        return SESSION_TRACKER;
     }
 }
