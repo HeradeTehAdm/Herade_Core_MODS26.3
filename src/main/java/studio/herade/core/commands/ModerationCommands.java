@@ -239,7 +239,7 @@ public final class ModerationCommands {
         UserBanListEntry existing = source.getServer().getPlayerList().getBans().getEntries().stream()
                 .filter(entry -> entry.getUser() != null && playerId.equals(entry.getUser().id()))
                 .findFirst().orElse(null);
-        if (existing == null || !source.getServer().getPlayerList().getBans().remove(existing.getUser())) {
+        if (existing == null) {
             source.sendFailure(Component.literal("Активная блокировка для этого UUID не найдена."));
             return 0;
         }
@@ -254,6 +254,10 @@ public final class ModerationCommands {
         if (revokedBans != activeBans) {
             source.sendFailure(Component.literal(
                     "Не удалось полностью записать снятие блокировки в журнал. Повтори команду."));
+            return 0;
+        }
+        if (!source.getServer().getPlayerList().getBans().remove(existing.getUser())) {
+            source.sendFailure(Component.literal("Не удалось удалить блокировку из списка Minecraft."));
             return 0;
         }
         HeradeCore.punishmentStore().issue(new Punishment(
