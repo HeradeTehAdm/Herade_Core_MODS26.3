@@ -15,5 +15,8 @@
     "minecraft": "~26.3",
     "java": ">=26",
     "fabric-api": "*"
-  }
+  },
+  "mixins": [
+    "herade_core.mixins.json"
+  ]
 }
