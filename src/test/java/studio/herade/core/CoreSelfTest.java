@@ -17,6 +17,8 @@ public final class CoreSelfTest {
         testPunishmentModel();
         testPunishmentPersistence();
         testTimeoutPersistence();
+        testChatRateLimiter();
+        testJoinProtection();
         testAuditPersistence();
         System.out.println("[Herade Core] All self-tests passed.");
     }
@@ -94,6 +96,32 @@ public final class CoreSelfTest {
             deleteTree(directory);
         }
         System.out.println("[Herade Core] Timeout persistence: OK");
+    }
+
+    private static void testChatRateLimiter() {
+        ChatRateLimiter limiter = new ChatRateLimiter();
+        UUID player = UUID.randomUUID();
+        for (int i = 0; i < 5; i++) {
+            check(limiter.check(player, 1_000 + i).allowed(), "first five chat messages should pass");
+        }
+        ChatRateLimiter.Decision blocked = limiter.check(player, 1_010);
+        check(!blocked.allowed() && blocked.notifyPlayer(), "sixth message should be blocked and notify once");
+        check(!limiter.check(player, 1_100).notifyPlayer(), "chat notice should be throttled");
+        check(limiter.check(player, 6_100).allowed(), "chat window should reset after five seconds");
+        limiter.clear(player);
+        System.out.println("[Herade Core] Chat rate limiter: OK");
+    }
+
+    private static void testJoinProtection() {
+        JoinProtectionManager protection = new JoinProtectionManager();
+        int alert = 0;
+        for (int i = 0; i < 8; i++) {
+            alert = protection.recordJoin(UUID.randomUUID(), 10_000 + i * 100L);
+        }
+        check(alert == 8, "eighth rapid join should trigger one alert");
+        check(protection.recordJoin(UUID.randomUUID(), 10_900) == 0,
+                "join flood alert should respect its cooldown");
+        System.out.println("[Herade Core] Join protection: OK");
     }
 
     private static void testAuditPersistence() throws Exception {
