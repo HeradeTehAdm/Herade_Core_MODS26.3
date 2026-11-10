@@ -19,6 +19,9 @@ public final class JoinProtectionManager {
             recentJoins.removeFirst();
         }
         recentJoins.addLast(nowMillis);
+        while (recentJoins.size() > 1024) {
+            recentJoins.removeFirst();
+        }
 
         if (recentJoins.size() >= ALERT_THRESHOLD
                 && nowMillis - lastAlertMillis >= ALERT_COOLDOWN_MILLIS) {
