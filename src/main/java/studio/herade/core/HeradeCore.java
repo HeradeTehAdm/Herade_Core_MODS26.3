@@ -165,6 +165,7 @@ public final class HeradeCore implements ModInitializer {
         ServerLifecycleEvents.SERVER_STOPPING.register(VANISH_MANAGER::clear);
         ServerTickEvents.END_SERVER_TICK.register(server -> {
             BAN_EXPIRY_MANAGER.tick(server);
+            timeoutManager.tick();
             AUDIT_MAINTENANCE_MANAGER.tick();
         });
 
