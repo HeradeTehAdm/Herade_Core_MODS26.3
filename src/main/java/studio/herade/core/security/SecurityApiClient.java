@@ -44,7 +44,8 @@ public final class SecurityApiClient {
         }
 
         this.endpoint = base.resolve("api/v1/minecraft/verify");
-        this.secret = System.getenv(TOKEN_ENV);
+        String configuredSecret = System.getenv(TOKEN_ENV);
+        this.secret = configuredSecret == null ? null : configuredSecret.trim();
         if (this.secret != null && !this.secret.isBlank()
                 && this.secret.getBytes(StandardCharsets.UTF_8).length < 32) {
             throw new IllegalArgumentException(TOKEN_ENV + " must contain at least 32 UTF-8 bytes.");
