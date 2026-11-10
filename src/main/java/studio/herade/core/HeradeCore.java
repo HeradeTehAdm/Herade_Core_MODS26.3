@@ -15,6 +15,7 @@ import studio.herade.core.security.SecurityApiClient.VerificationResult;
 import studio.herade.core.security.SecurityApiClient.VerificationStatus;
 
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CancellationException;
 import studio.herade.core.moderation.PunishmentStore;
 import studio.herade.core.security.SecurityApiClient;
 import org.slf4j.Logger;
@@ -74,22 +75,19 @@ public final class HeradeCore implements ModInitializer {
 
             CompletableFuture<Void> verification = CompletableFuture.runAsync(() -> {
                 if (!server.usesAuthentication()) {
-                    listener.disconnect(Component.literal(
-                            "Herade Core требует online-mode=true для безопасной проверки UUID."));
-                    return;
+                    rejectLogin(listener,
+                            "Herade Core требует online-mode=true для безопасной проверки UUID.");
                 }
 
                 var profile = ((ServerLoginPacketListenerAccessor) listener).herade$getAuthenticatedProfile();
                 if (profile == null || profile.id() == null || profile.name() == null) {
-                    listener.disconnect(Component.literal(
-                            "Не удалось подтвердить профиль Minecraft. Попробуй войти позже."));
-                    return;
+                    rejectLogin(listener,
+                            "Не удалось подтвердить профиль Minecraft. Попробуй войти позже.");
                 }
 
                 if (securityApiClient == null) {
                     if (config.failClosed()) {
-                        listener.disconnect(Component.literal(
-                                "Сервис авторизации недоступен. Попробуй войти позже."));
+                        rejectLogin(listener, "Сервис авторизации недоступен. Попробуй войти позже.");
                     }
                     return;
                 }
@@ -100,15 +98,13 @@ public final class HeradeCore implements ModInitializer {
                 }
 
                 if (result.status() == VerificationStatus.CHALLENGE && result.challengeCode() != null) {
-                    listener.disconnect(Component.literal(
-                            "Подтверди привязку в Discord: одноразовый код " + result.challengeCode()
-                                    + ". Выполни /minecraft confirm с этим кодом."));
+                    rejectLogin(listener, "Подтверди привязку в Discord: одноразовый код "
+                            + result.challengeCode() + ". Выполни /minecraft confirm с этим кодом.");
                 } else if (result.status() == VerificationStatus.DENIED) {
-                    listener.disconnect(Component.literal(
-                            "Доступ не подтверждён. Создай или проверь заявку через Discord-бота HeradeLegend."));
+                    rejectLogin(listener,
+                            "Доступ не подтверждён. Создай или проверь заявку через Discord-бота HeradeLegend.");
                 } else if (result.status() == VerificationStatus.UNAVAILABLE && config.failClosed()) {
-                    listener.disconnect(Component.literal(
-                            "Сервис авторизации временно недоступен. Попробуй войти позже."));
+                    rejectLogin(listener, "Сервис авторизации временно недоступен. Попробуй войти позже.");
                 }
             });
 
@@ -172,6 +168,13 @@ public final class HeradeCore implements ModInitializer {
         LOGGER.info("Herade Core {} initialized.", BuildInfo.VERSION);
         LOGGER.info("Configuration loaded: authentication={}, audit={}",
                 config.authenticationEnabled(), config.auditEnabled());
+    }
+
+    private static void rejectLogin(net.minecraft.server.network.ServerLoginPacketListenerImpl listener,
+                                    String message) {
+        listener.disconnect(Component.literal(message));
+        // Fabric's LoginSynchronizer only stops the login state machine for an exceptional future.
+        throw new CancellationException("Herade Core rejected this login.");
     }
 
     public static CoreConfig config() {
