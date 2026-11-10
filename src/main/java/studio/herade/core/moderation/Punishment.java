@@ -25,7 +25,8 @@ public record Punishment(
         if ((type == PunishmentType.TEMP_BAN || type == PunishmentType.TIMEOUT) && expiresAtMillis == 0) {
             throw new IllegalArgumentException("Temporary punishments require an expiry timestamp.");
         }
-        if ((type == PunishmentType.BAN || type == PunishmentType.KICK) && expiresAtMillis != 0) {
+        if ((type == PunishmentType.BAN || type == PunishmentType.KICK || type == PunishmentType.PARDON)
+                && expiresAtMillis != 0) {
             throw new IllegalArgumentException("Permanent bans and kicks must not have an expiry.");
         }
     }
@@ -35,6 +36,7 @@ public record Punishment(
     }
 
     public boolean isPersistentRestriction(long nowMillis) {
-        return type != PunishmentType.KICK && !isExpired(nowMillis);
+        return (type == PunishmentType.BAN || type == PunishmentType.TEMP_BAN || type == PunishmentType.TIMEOUT)
+                && !isExpired(nowMillis);
     }
 }
