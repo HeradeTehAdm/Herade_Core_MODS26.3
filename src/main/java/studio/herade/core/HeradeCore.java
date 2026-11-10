@@ -3,6 +3,13 @@ package studio.herade.core;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.loader.api.FabricLoader;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
+import net.fabricmc.fabric.api.networking.v1.ServerLoginConnectionEvents;
+import net.minecraft.network.chat.Component;
+import net.minecraft.server.network.ServerLoginPacketListenerImpl;
+import studio.herade.core.mixin.ServerLoginPacketListenerAccessor;
+import studio.herade.core.security.SecurityApiClient.VerificationResult;
+
+import java.util.concurrent.CompletableFuture;
 import studio.herade.core.moderation.PunishmentStore;
 import studio.herade.core.security.SecurityApiClient;
 import org.slf4j.Logger;
@@ -39,6 +46,44 @@ public final class HeradeCore implements ModInitializer {
                     .resolve("audit.log");
             auditLog = new AuditLog(auditPath, config.auditRetentionDays());
         }
+
+        ServerLoginConnectionEvents.QUERY_START.register((listener, server, sender, synchronizer) -> {
+            if (!config.authenticationEnabled()) {
+                return;
+            }
+
+            CompletableFuture<Void> verification = CompletableFuture.runAsync(() -> {
+                var profile = ((ServerLoginPacketListenerAccessor) listener).herade$getAuthenticatedProfile();
+                if (profile == null || profile.id() == null || profile.name() == null) {
+                    listener.disconnect(Component.literal(
+                            "Не удалось подтвердить профиль Minecraft. Попробуй войти позже."));
+                    return;
+                }
+
+                if (securityApiClient == null) {
+                    if (config.failClosed()) {
+                        listener.disconnect(Component.literal(
+                                "Сервис авторизации недоступен. Попробуй войти позже."));
+                    }
+                    return;
+                }
+
+                VerificationResult result = securityApiClient.verify(profile.id(), profile.name()).join();
+                if (auditLog != null) {
+                    auditLog.append(null, "LOGIN_VERIFICATION_" + result.name(), profile.id(), profile.name());
+                }
+
+                if (result == VerificationResult.DENIED) {
+                    listener.disconnect(Component.literal(
+                            "Доступ не подтверждён. Заверши регистрацию через Discord-бота HeradeLegend."));
+                } else if (result == VerificationResult.UNAVAILABLE && config.failClosed()) {
+                    listener.disconnect(Component.literal(
+                            "Сервис авторизации временно недоступен. Попробуй войти позже."));
+                }
+            });
+
+            synchronizer.waitFor(verification);
+        });
 
         ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> {
             if (auditLog != null) {
