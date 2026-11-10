@@ -19,6 +19,7 @@ public final class CoreSelfTest {
         testPunishmentModel();
         testPunishmentPersistence();
         testTimeoutPersistence();
+        testScopedRevocations();
         testChatRateLimiter();
         testJoinProtection();
         testPlayerSessions();
@@ -107,6 +108,34 @@ public final class CoreSelfTest {
             deleteTree(directory);
         }
         System.out.println("[Herade Core] Timeout persistence: OK");
+    }
+
+    private static void testScopedRevocations() throws Exception {
+        Path directory = Files.createTempDirectory("herade-scoped-revocation-test");
+        try {
+            PunishmentStore store = new PunishmentStore(directory.resolve("punishments.journal"));
+            UUID target = UUID.randomUUID();
+            long now = System.currentTimeMillis();
+            Punishment permanentBan = new Punishment(UUID.randomUUID(), target, null,
+                    PunishmentType.BAN, "test ban", now, 0);
+            Punishment timeout = new Punishment(UUID.randomUUID(), target, null,
+                    PunishmentType.TIMEOUT, "test timeout", now, now + 60_000);
+            check(store.issue(permanentBan), "ban should be persisted for scoped revocation test");
+            check(store.issue(timeout), "timeout should be persisted for scoped revocation test");
+
+            check(store.revokeActiveBans(target, null, "test unban") == 1,
+                    "unban should revoke exactly the ban record");
+            var remaining = store.activeFor(target);
+            check(remaining.size() == 1 && remaining.get(0).type() == PunishmentType.TIMEOUT,
+                    "unban must preserve an active timeout");
+            check(store.revokeActiveTimeouts(target, null, "test untimeout") == 1,
+                    "untimeout should revoke exactly the timeout record");
+            check(store.activeFor(target).isEmpty(),
+                    "all restrictions should be cleared after their scoped revocations");
+        } finally {
+            deleteTree(directory);
+        }
+        System.out.println("[Herade Core] Scoped punishment revocations: OK");
     }
 
     private static void testChatRateLimiter() {
