@@ -9,6 +9,9 @@ import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import net.fabricmc.fabric.api.event.player.AttackEntityCallback;
 import net.fabricmc.fabric.api.event.player.UseEntityCallback;
+import net.fabricmc.fabric.api.event.player.AttackBlockCallback;
+import net.fabricmc.fabric.api.event.player.UseBlockCallback;
+import net.fabricmc.fabric.api.event.player.UseItemCallback;
 import net.fabricmc.fabric.api.entity.event.v1.ServerLivingEntityEvents;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.server.level.ServerPlayer;
@@ -85,8 +88,21 @@ public final class HeradeCore implements ModInitializer {
             }
             return InteractionResult.PASS;
         });
+        AttackBlockCallback.EVENT.register((player, level, hand, pos, direction) ->
+                player instanceof ServerPlayer target && VANISH_MANAGER.isVanished(target.getUUID())
+                        ? InteractionResult.FAIL : InteractionResult.PASS);
+        UseBlockCallback.EVENT.register((player, level, hand, hitResult) ->
+                player instanceof ServerPlayer target && VANISH_MANAGER.isVanished(target.getUUID())
+                        ? InteractionResult.FAIL : InteractionResult.PASS);
+        UseItemCallback.EVENT.register((player, level, hand) ->
+                player instanceof ServerPlayer target && VANISH_MANAGER.isVanished(target.getUUID())
+                        ? InteractionResult.FAIL : InteractionResult.PASS);
         ServerLivingEntityEvents.ALLOW_DAMAGE.register((entity, source, amount) ->
                 !(entity instanceof ServerPlayer target && VANISH_MANAGER.isVanished(target.getUUID())));
+
+        ServerMessageEvents.ALLOW_COMMAND_MESSAGE.register((message, source, boundChatType) ->
+                !(source.getEntity() instanceof ServerPlayer player
+                        && VANISH_MANAGER.isVanished(player.getUUID())));
 
         ServerLoginConnectionEvents.QUERY_START.register((listener, server, sender, synchronizer) -> {
             if (!config.authenticationEnabled()) {
@@ -132,6 +148,9 @@ public final class HeradeCore implements ModInitializer {
         });
 
         ServerMessageEvents.ALLOW_CHAT_MESSAGE.register((message, sender, boundChatType) -> {
+            if (VANISH_MANAGER.isVanished(sender.getUUID())) {
+                return false;
+            }
             if (timeoutManager != null && timeoutManager.isTimedOut(sender.getUUID())) {
                 if (timeoutManager.shouldNotify(sender.getUUID())) {
                     sender.sendSystemMessage(Component.literal("На тебе действует временный запрет на отправку сообщений в чат."));
