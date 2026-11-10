@@ -31,6 +31,15 @@ jobs:
       - name: Build mod
         run: gradle selfTest build --no-daemon
 
+      - name: Verify runtime JAR contents
+        shell: bash
+        run: |
+          MOD_JAR="$(find build/libs -maxdepth 1 -type f -name 'herade-core-*.jar' ! -name '*-sources.jar' ! -name '*-dev.jar' -print -quit)"
+          test -n "$MOD_JAR"
+          jar tf "$MOD_JAR" | grep -qx 'fabric.mod.json'
+          jar tf "$MOD_JAR" | grep -qx 'herade_core.mixins.json'
+          jar tf "$MOD_JAR" | grep -qx 'studio/herade/core/HeradeCore.class'
+
       - name: Upload JAR
         uses: actions/upload-artifact@v4
         with:
