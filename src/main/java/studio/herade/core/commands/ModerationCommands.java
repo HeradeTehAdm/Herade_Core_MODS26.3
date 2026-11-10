@@ -250,6 +250,9 @@ public final class ModerationCommands {
     private static int inspect(CommandSourceStack source, ServerPlayer target) {
         String coordinates = String.format(Locale.ROOT, "%.1f, %.1f, %.1f",
                 target.getX(), target.getY(), target.getZ());
+        String health = String.format(Locale.ROOT, "%.1f/%.1f",
+                target.getHealth(), target.getMaxHealth());
+        boolean vanished = HeradeCore.vanish().isVanished(target.getUUID());
         String sessionStarted = HeradeCore.sessions().find(target.getUUID())
                 .map(session -> Instant.ofEpochMilli(session.joinedAtMillis()).toString())
                 .orElse("нет данных");
@@ -258,6 +261,8 @@ public final class ModerationCommands {
                         + " | UUID: " + target.getUUID()
                         + " | Мир: " + target.level().dimension()
                         + " | Координаты: " + coordinates
+                        + " | Здоровье: " + health
+                        + " | Vanish: " + vanished
                         + " | Вход: " + sessionStarted), false);
         return 1;
     }
