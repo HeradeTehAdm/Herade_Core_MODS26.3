@@ -12,6 +12,8 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public final class VanishManager {
     private final Set<UUID> vanishedPlayers = ConcurrentHashMap.newKeySet();
+    private final java.util.Map<UUID, Boolean> previousInvisible =
+            new ConcurrentHashMap<>();
 
     public boolean isVanished(UUID playerId) {
         return playerId != null && vanishedPlayers.contains(playerId);
@@ -36,6 +38,13 @@ public final class VanishManager {
     public void playerDisconnected(UUID playerId) {
         if (playerId != null) {
             vanishedPlayers.remove(playerId);
+            previousInvisible.remove(playerId);
+        }
+    }
+
+    public void refresh(MinecraftServer server, ServerPlayer player) {
+        if (server != null && player != null && isVanished(player.getUUID())) {
+            hide(server, player);
         }
     }
 
@@ -61,6 +70,7 @@ public final class VanishManager {
     }
 
     private void hide(MinecraftServer server, ServerPlayer player) {
+        previousInvisible.putIfAbsent(player.getUUID(), player.isInvisible());
         player.setInvisible(true);
         ClientboundPlayerInfoRemovePacket packet =
                 new ClientboundPlayerInfoRemovePacket(List.of(player.getUUID()));
@@ -72,7 +82,8 @@ public final class VanishManager {
     }
 
     private void show(MinecraftServer server, ServerPlayer player) {
-        player.setInvisible(false);
+        Boolean wasInvisible = previousInvisible.remove(player.getUUID());
+        player.setInvisible(Boolean.TRUE.equals(wasInvisible));
         ClientboundPlayerInfoUpdatePacket packet =
                 ClientboundPlayerInfoUpdatePacket.createPlayerInitializing(List.of(player));
         for (ServerPlayer viewer : server.getPlayerList().getPlayers()) {
