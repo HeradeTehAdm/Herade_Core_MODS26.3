@@ -1,53 +1,72 @@
 # Herade Core
 
-Unified server-side Fabric mod for Herade House, targeting Minecraft **26.3**.
+Единый серверный Fabric-мод для Herade House, Minecraft 26.3, Java 26.
 
-## Current status
+## Состояние разработки
 
-This repository is being initialized from an empty repository. The first commit establishes the build, metadata, server entrypoint and CI build workflow. Gameplay and administration modules will be added incrementally after the baseline build is verified.
+Базовая сборка и CI настроены. Реализованы загрузка конфигурации, аудит событий, журнал наказаний, модераторские команды и шлюз авторизации через существующего Discord-бота DS_Hereid. Проект продолжает развиваться; полный релиз ещё не объявлен.
 
-## Requirements
+## Требования
 
 - Minecraft 26.3
-- Fabric Loader 0.20.1 or newer
+- Fabric Loader 0.20.1+
 - Fabric API 0.162.0+26.3
 - Java 26
-- Gradle 9.8.0
+- Gradle 9.8.0+
 
-Version values are maintained in `gradle.properties`.
+Версии зависимостей находятся в gradle.properties.
 
-## Build
+## Сборка и самопроверка
 
-With Java 26 and Gradle 9.7.1 installed:
+Команда сборки:
 
-```bash
-gradle build
-```
+    gradle selfTest build --no-daemon
 
-The remapped mod JAR is produced in `build/libs/`.
+JAR создаётся в build/libs/. CI выполняет self-tests перед сборкой и публикует JAR как артефакт GitHub Actions.
 
-## Planned modules
+## Уже реализовано
 
-- Core lifecycle and configuration
-- Permission integration (no replacement permission-group system)
-- Moderation and punishment persistence
-- Vanish
-- Player inspection
-- Teleport command extensions without shadowing vanilla commands
-- Audit and security logs
-- Server protection and diagnostics
-- Herade Security API integration with DS_Hereid
-- Login approval and one-time second-factor challenges
+- Серверный entrypoint и конфигурация в config/herade-core/herade-core.properties.
+- Персистентный аудит событий в audit.log, с ограничением срока хранения.
+- Журнал наказаний в punishments.journal: BAN, TEMP_BAN, KICK и TIMEOUT; проверка срока действия и отзыв записей.
+- Команды модератора /herade status, /herade inspect <player>, /herade punishments <player>.
+- Используется встроенная permission-система Minecraft, без собственной иерархии привилегий.
+- HMAC-SHA256 HTTPS-клиент для DS_Hereid.
+- Шлюз входа по аутентифицированному UUID, одноразовый challenge и режим fail-closed.
+- Аудит подключений и отключений игроков.
+- Автоматическая сборка Java 26 в GitHub Actions.
 
-## Security principles
+## Интеграция с DS_Hereid
 
-- Use authenticated Minecraft UUIDs as account identifiers.
-- Never collect hidden hardware fingerprints, MAC addresses or device serial numbers.
-- Treat IP addresses as sensitive data; minimize retention and restrict access.
-- Keep API credentials on the server, never in the mod's client-side code.
-- Gate pending logins before they can interact with the world.
-- Preserve existing server and bot data; use migrations rather than destructive resets.
+Discord-бот остаётся единой точкой управления регистрацией и одобрением заявок. Новый бот или отдельная панель не создаются.
 
-## Integration
+Поток регистрации:
+1. Игрок выполняет в Discord /minecraft link username.
+2. Игрок пробует подключиться к серверу. Если UUID ещё не одобрен, вход отклоняется и в сообщении показывается одноразовый код.
+3. Игрок вводит код в Discord через /minecraft confirm code.
+4. Заявка поступает администрации. Участник с Manage Server или Administrator одобряет её командой /minecraft approve uuid либо отклоняет через /minecraft reject uuid.
+5. После одобрения API начинает возвращать разрешение для этого UUID.
 
-The Discord bot remains the control plane for staff-facing workflows. Herade Core communicates with a separately authenticated HTTPS API; it does not create a second Discord bot or duplicate the bot's admin panel.
+В моде включи authentication.enabled=true, укажи authentication.api-base-url как HTTPS-адрес API и передай HERADE_CORE_API_TOKEN через переменные окружения сервера. Тот же секрет должен быть установлен у DS_Hereid и содержать не менее 32 UTF-8 байт.
+
+API бота слушает HTTP на loopback по умолчанию. Для доступа из другого контейнера или сервера нужен ограниченный сетевой маршрут и доверенный TLS reverse proxy. Не публикуй внутренний HTTP listener напрямую в интернет.
+
+Для авторизации обязательно online-mode=true. При недоступности API новые подключения блокируются, если authentication.fail-closed=true. Уже вошедшие игроки не отключаются из-за кратковременной недоступности API.
+
+## Безопасность и сохранность данных
+
+- UUID из аутентифицированного профиля Minecraft — идентификатор игрока.
+- API использует HMAC-SHA256, ограничение времени запроса и одноразовые nonce для защиты от повторного воспроизведения.
+- Секрет API хранится только в переменных окружения, не в файле конфигурации и не в клиентском коде.
+- IP-адреса не записываются в аудит по умолчанию.
+- Не собираются аппаратные отпечатки, MAC-адреса и серийные номера устройств.
+- Новые таблицы DS_Hereid создаются через CREATE TABLE IF NOT EXISTS; существующая SQLite-база и данные бота не сбрасываются.
+
+## Следующие этапы
+
+- Полные команды модерации с синхронизацией с журналом наказаний.
+- Vanish с корректным скрытием из мира и списка игроков.
+- Расширенная инспекция игрока и история действий.
+- Телепортация, защита от спама/рейдов и диагностика.
+- Проверки совместимости с другими Fabric-модами и нагрузочные тесты.
+- Финальная сборка, тестирование на выделенном сервере 26.3 и релиз.
