@@ -36,9 +36,11 @@ public final class SecurityApiClient {
     public SecurityApiClient(CoreConfig config) {
         String configuredUrl = config.apiBaseUrl().trim();
         URI base = URI.create(configuredUrl.endsWith("/") ? configuredUrl : configuredUrl + "/");
+        String basePath = base.getRawPath();
         if (!"https".equalsIgnoreCase(base.getScheme()) || base.getHost() == null
-                || base.getUserInfo() != null || base.getFragment() != null || base.getRawQuery() != null) {
-            throw new IllegalArgumentException("Security API must be an HTTPS base URL without user-info, query or fragment.");
+                || base.getUserInfo() != null || base.getFragment() != null || base.getRawQuery() != null
+                || (basePath != null && !basePath.isBlank() && !"/".equals(basePath))) {
+            throw new IllegalArgumentException("Security API must be a root HTTPS URL without user-info, path, query or fragment.");
         }
 
         this.endpoint = base.resolve("api/v1/minecraft/verify");
