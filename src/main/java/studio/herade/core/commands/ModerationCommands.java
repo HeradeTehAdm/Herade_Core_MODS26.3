@@ -33,6 +33,8 @@ public final class ModerationCommands {
 
         root.then(Commands.literal("status")
                 .executes(context -> status(context.getSource())));
+        root.then(Commands.literal("diagnostics")
+                .executes(context -> diagnostics(context.getSource())));
         root.then(Commands.literal("vanish")
                 .executes(context -> toggleVanish(context.getSource())));
         root.then(Commands.literal("kick")
@@ -77,6 +79,23 @@ public final class ModerationCommands {
                                 EntityArgument.getPlayer(context, "target")))));
 
         dispatcher.register(root);
+    }
+
+    private static int diagnostics(CommandSourceStack source) {
+        Runtime runtime = Runtime.getRuntime();
+        long usedMemory = runtime.totalMemory() - runtime.freeMemory();
+        long maxMemory = runtime.maxMemory();
+        int loadedMods = net.fabricmc.loader.api.FabricLoader.getInstance().getAllMods().size();
+        int onlinePlayers = source.getServer().getPlayerList().getPlayerCount();
+        source.sendSuccess(() -> Component.literal(
+                "Herade Core diagnostics"
+                        + " | Java=" + System.getProperty("java.version")
+                        + " | Mods=" + loadedMods
+                        + " | Online=" + onlinePlayers
+                        + " | Heap=" + (usedMemory / 1_048_576) + "/" + (maxMemory / 1_048_576) + " MiB"
+                        + " | Auth=" + HeradeCore.config().authenticationEnabled()
+                        + " | Audit=" + HeradeCore.config().auditEnabled()), false);
+        return 1;
     }
 
     private static int status(CommandSourceStack source) {
