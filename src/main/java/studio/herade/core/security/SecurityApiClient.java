@@ -17,10 +17,14 @@ import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
 public final class SecurityApiClient {
-    public enum VerificationResult {
+    public enum VerificationStatus {
         APPROVED,
+        CHALLENGE,
         DENIED,
         UNAVAILABLE
+    }
+
+    public record VerificationResult(VerificationStatus status, String challengeCode) {
     }
 
     private static final String TOKEN_ENV = "HERADE_CORE_API_TOKEN";
@@ -48,11 +52,11 @@ public final class SecurityApiClient {
 
     public CompletableFuture<VerificationResult> verify(UUID playerId, String playerName) {
         if (playerId == null || playerName == null || playerName.isBlank()) {
-            return CompletableFuture.completedFuture(VerificationResult.DENIED);
+            return CompletableFuture.completedFuture(new VerificationResult(VerificationStatus.DENIED, null));
         }
         if (secret == null || secret.isBlank()) {
             HeradeCore.LOGGER.error("Authentication is enabled but {} is not configured.", TOKEN_ENV);
-            return CompletableFuture.completedFuture(VerificationResult.UNAVAILABLE);
+            return CompletableFuture.completedFuture(new VerificationResult(VerificationStatus.UNAVAILABLE, null));
         }
 
         String body = "{\"uuid\":\"" + playerId + "\",\"username\":\"" + escapeJson(playerName) + "\"}";
@@ -79,19 +83,27 @@ public final class SecurityApiClient {
                 .POST(HttpRequest.BodyPublishers.ofString(body, StandardCharsets.UTF_8))
                 .build();
 
-        return httpClient.sendAsync(request, HttpResponse.BodyHandlers.discarding())
-                .thenApply(response -> switch (response.statusCode()) {
-                    case 204 -> VerificationResult.APPROVED;
-                    case 403 -> VerificationResult.DENIED;
-                    default -> {
-                        HeradeCore.LOGGER.warn("Security API returned HTTP {}.", response.statusCode());
-                        yield VerificationResult.UNAVAILABLE;
+        return httpClient.sendAsync(request, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8))
+                .thenApply(response -> {
+                    if (response.statusCode() == 204) {
+                        return new VerificationResult(VerificationStatus.APPROVED, null);
                     }
+                    if (response.statusCode() == 403) {
+                        java.util.regex.Matcher matcher = java.util.regex.Pattern
+                                .compile("\\\"challenge\\\"\\s*:\\s*\\\"([0-9]{6})\\\"")
+                                .matcher(response.body());
+                        if (matcher.find()) {
+                            return new VerificationResult(VerificationStatus.CHALLENGE, matcher.group(1));
+                        }
+                        return new VerificationResult(VerificationStatus.DENIED, null);
+                    }
+                    HeradeCore.LOGGER.warn("Security API returned HTTP {}.", response.statusCode());
+                    return new VerificationResult(VerificationStatus.UNAVAILABLE, null);
                 })
                 .exceptionally(exception -> {
                     HeradeCore.LOGGER.warn("Security API request failed: {}",
                             exception.getClass().getSimpleName());
-                    return VerificationResult.UNAVAILABLE;
+                    return new VerificationResult(VerificationStatus.UNAVAILABLE, null);
                 });
     }
 
