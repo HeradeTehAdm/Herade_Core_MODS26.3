@@ -91,12 +91,18 @@ public final class CoreSelfTest {
 
             TimeoutManager manager = new TimeoutManager(store);
             check(manager.isTimedOut(target), "restored timeout should be active");
-            check(manager.shouldNotify(target), "first timeout notice should be allowed");
-            check(!manager.shouldNotify(target), "timeout notice should be throttled");
+            check(manager.shouldNotify(target, now), "first timeout notice should be allowed");
+            check(!manager.shouldNotify(target, now + 1_000), "timeout notice should be throttled");
+            check(!manager.shouldNotify(target, now + 1_999),
+                    "repeated blocked messages must not extend the notice cooldown");
+            check(manager.shouldNotify(target, now + 2_000),
+                    "timeout notice should be allowed again after two seconds");
             check(store.revokeActiveTimeouts(target, null, "test untimeout") == 1,
                     "active timeout should be revocable");
             TimeoutManager reopened = new TimeoutManager(store);
             check(!reopened.isTimedOut(target), "revoked timeout should not be restored");
+        check(!reopened.shouldNotify(null, System.currentTimeMillis()),
+                "timeout notice must reject a null player id");
         check(!reopened.shouldNotify(null), "timeout notice must reject a null player id");
         } finally {
             deleteTree(directory);
