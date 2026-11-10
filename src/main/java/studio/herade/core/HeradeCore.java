@@ -100,10 +100,6 @@ public final class HeradeCore implements ModInitializer {
         ServerLivingEntityEvents.ALLOW_DAMAGE.register((entity, source, amount) ->
                 !(entity instanceof ServerPlayer target && VANISH_MANAGER.isVanished(target.getUUID())));
 
-        ServerMessageEvents.ALLOW_COMMAND_MESSAGE.register((message, source, boundChatType) ->
-                !(source.getEntity() instanceof ServerPlayer player
-                        && VANISH_MANAGER.isVanished(player.getUUID())));
-
         ServerLoginConnectionEvents.QUERY_START.register((listener, server, sender, synchronizer) -> {
             if (!config.authenticationEnabled()) {
                 return;
