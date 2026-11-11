@@ -18,6 +18,7 @@ import net.minecraft.world.InteractionResult;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.level.ServerLevel;
 import studio.herade.core.commands.ModerationCommands;
+import studio.herade.core.commands.MinecraftLinkCommand;
 import net.fabricmc.fabric.api.networking.v1.ServerLoginConnectionEvents;
 import net.minecraft.network.chat.Component;
 import studio.herade.core.mixin.ServerLoginPacketListenerAccessor;
@@ -77,6 +78,8 @@ public final class HeradeCore implements ModInitializer {
 
         CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) ->
                 ModerationCommands.register(dispatcher));
+        CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) ->
+                MinecraftLinkCommand.register(dispatcher));
 
         AttackEntityCallback.EVENT.register((player, level, hand, entity, hitResult) -> {
             if (entity instanceof ServerPlayer target && VANISH_MANAGER.isVanished(target.getUUID())) {
@@ -132,8 +135,8 @@ public final class HeradeCore implements ModInitializer {
                 }
 
                 if (result.status() == VerificationStatus.CHALLENGE && result.challengeCode() != null) {
-                    rejectLogin(listener, "Подтверди привязку в Discord: одноразовый код "
-                            + result.challengeCode() + ". Выполни /minecraft confirm с этим кодом.");
+                    LOGGER.info("Minecraft link is awaiting confirmation for {}. Player may join and use /minecraft link to receive the code privately.",
+                            profile.name());
                 } else if (result.status() == VerificationStatus.DENIED) {
                     rejectLogin(listener,
                             "Доступ не подтверждён. Создай или проверь заявку через Discord-бота HeradeLegend.");
