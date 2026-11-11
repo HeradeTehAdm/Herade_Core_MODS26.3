@@ -39,6 +39,7 @@ jobs:
           jar tf "$MOD_JAR" | grep -qx 'fabric.mod.json'
           jar tf "$MOD_JAR" | grep -qx 'herade_core.mixins.json'
           jar tf "$MOD_JAR" | grep -qx 'studio/herade/core/HeradeCore.class'
+          jar tf "$MOD_JAR" | grep -qx 'studio/herade/core/commands/MinecraftLinkCommand.class'
 
       - name: Upload JAR as workflow artifact
         uses: actions/upload-artifact@v4
