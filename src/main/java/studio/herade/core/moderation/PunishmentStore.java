@@ -125,7 +125,38 @@ public final class PunishmentStore {
                 + "\t" + pardon.createdAtMillis()
                 + "\t" + pardon.expiresAtMillis()
                 + "\t" + encode(pardon.reason()));
-        return append(String.join(System.lineSeparator(), records));
+        return appendBatchAtomically(records);
+    }
+
+    private boolean appendBatchAtomically(List<String> records) {
+        if (records.isEmpty()) return true;
+        Path temporary = file.resolveSibling(file.getFileName() + ".txn");
+        try {
+            Files.createDirectories(file.getParent());
+            if (Files.exists(file)) {
+                Files.copy(file, temporary, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+            } else {
+                Files.createFile(temporary);
+            }
+            Files.writeString(temporary, String.join(System.lineSeparator(), records)
+                            + System.lineSeparator(),
+                    StandardCharsets.UTF_8, StandardOpenOption.WRITE, StandardOpenOption.APPEND);
+            try {
+                Files.move(temporary, file, java.nio.file.StandardCopyOption.ATOMIC_MOVE,
+                        java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+            } catch (java.nio.file.AtomicMoveNotSupportedException exception) {
+                Files.move(temporary, file, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+            }
+            return true;
+        } catch (IOException exception) {
+            HeradeCore.LOGGER.error("Could not commit punishment journal transaction.", exception);
+            try {
+                Files.deleteIfExists(temporary);
+            } catch (IOException cleanupException) {
+                exception.addSuppressed(cleanupException);
+            }
+            return false;
+        }
     }
 
     public synchronized List<Punishment> activeFor(UUID targetId) {
