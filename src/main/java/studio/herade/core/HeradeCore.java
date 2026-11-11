@@ -189,6 +189,7 @@ public final class HeradeCore implements ModInitializer {
             }
         });
         ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> {
+            MinecraftLinkCommand.clear(handler.player.getUUID());
             VANISH_MANAGER.playerDisconnected(handler.player.getUUID());
             chatRateLimiter.clear(handler.player.getUUID());
             SESSION_TRACKER.left(handler.player.getUUID(), handler.player.getName().getString());
