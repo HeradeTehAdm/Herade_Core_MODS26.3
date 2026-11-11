@@ -40,7 +40,7 @@ public final class TimeoutManager {
         if (playerId == null || expiresAtMillis <= System.currentTimeMillis()) {
             throw new IllegalArgumentException("A timeout needs a player and a future expiry.");
         }
-        expirations.put(playerId, expiresAtMillis);
+        expirations.merge(playerId, expiresAtMillis, Math::max);
         lastNotice.remove(playerId);
     }
 
@@ -51,6 +51,7 @@ public final class TimeoutManager {
     }
 
     public boolean isTimedOut(UUID playerId) {
+        if (playerId == null) return false;
         Long expiresAt = expirations.get(playerId);
         if (expiresAt == null) return false;
         if (System.currentTimeMillis() >= expiresAt) {
