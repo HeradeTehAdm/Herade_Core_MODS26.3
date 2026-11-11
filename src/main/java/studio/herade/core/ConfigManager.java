@@ -74,7 +74,7 @@ public final class ConfigManager {
         if (authenticationEnabled && apiBaseUrl.isBlank()) {
             HeradeCore.LOGGER.error("Authentication is enabled but authentication.api-base-url is empty. "
                     + "The API client cannot initialize; new logins will {}.",
-                    defaults.failClosed() ? "be rejected (fail-closed)" : "be allowed (fail-open)");
+                    failClosed ? "be rejected (fail-closed)" : "be allowed (fail-open)");
         }
 
         return new CoreConfig(authenticationEnabled, apiBaseUrl, connectTimeout, requestTimeout,
