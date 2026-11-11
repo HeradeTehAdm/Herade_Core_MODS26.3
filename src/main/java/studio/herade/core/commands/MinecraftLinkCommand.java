@@ -88,30 +88,30 @@ public final class MinecraftLinkCommand {
                 && result.challengeCode() != null
                 && result.challengeCode().matches("[0-9]{8}")) {
             player.sendSystemMessage(Component.literal(
-                    "§aHerade Core: твой одноразовый код привязки: §e" + result.challengeCode()));
+                    "Herade Core: твой одноразовый код привязки: " + result.challengeCode()));
             player.sendSystemMessage(Component.literal(
-                    "§7Введи в Discord: /minecraft confirm с этим кодом. Код действует 10 минут."));
+                    "Введи в Discord: /minecraft confirm и укажи этот код. Код действует 10 минут."));
             player.sendSystemMessage(Component.literal(
-                    "§7Это личное сообщение — другие игроки его не видят."));
+                    "Это личное сообщение — другие игроки его не видят."));
             return;
         }
 
         if (result.status() == VerificationStatus.APPROVED) {
             player.sendSystemMessage(Component.literal(
-                    "§aТвой Minecraft-аккаунт уже привязан и одобрен. Доступ подтверждён."));
+                    "Твой Minecraft-аккаунт уже привязан и одобрен. Доступ подтверждён."));
             LAST_REQUEST.remove(player.getUUID());
             return;
         }
 
         if (result.status() == VerificationStatus.DENIED) {
             player.sendSystemMessage(Component.literal(
-                    "§cАктивная заявка не найдена или истекла. Сначала создай её через Discord: /minecraft link."));
+                    "Активная заявка не найдена или истекла. Сначала создай её через Discord: /minecraft link."));
             LAST_REQUEST.remove(player.getUUID());
             return;
         }
 
         player.sendSystemMessage(Component.literal(
-                "§cСервис регистрации временно недоступен. Попробуй позже."));
+                "Сервис регистрации временно недоступен. Попробуй позже."));
     }
 
     public static void clear(UUID playerId) {
