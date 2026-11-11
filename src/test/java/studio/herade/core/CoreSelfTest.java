@@ -104,6 +104,13 @@ public final class CoreSelfTest {
             check(!reopened.isTimedOut(target), "revoked timeout should not be restored");
             check(!reopened.shouldNotify(null, System.currentTimeMillis()),
                     "timeout notice must reject a null player id");
+            check(!reopened.isTimedOut(null), "timeout lookup must safely reject a null player id");
+            UUID overlappingTarget = UUID.randomUUID();
+            long laterExpiry = System.currentTimeMillis() + 120_000;
+            reopened.apply(overlappingTarget, laterExpiry);
+            reopened.apply(overlappingTarget, System.currentTimeMillis() + 30_000);
+            check(reopened.isTimedOut(overlappingTarget),
+                    "a shorter subsequent timeout must not shorten an existing longer timeout");
         } finally {
             deleteTree(directory);
         }
